@@ -103,7 +103,7 @@ export default function Calendar({
     let hit = 0;
     let miss = 0;
     for (const e of info.entries) {
-      const r = resultOf(actuals?.[hitKey(info.iso, e.accountId)], e.dailyTarget);
+      const r = resultOf(actuals?.[hitKey(info.iso, e.accountId)], e.perAccountTarget);
       if (r === "hit") hit++;
       else if (r === "miss") miss++;
     }

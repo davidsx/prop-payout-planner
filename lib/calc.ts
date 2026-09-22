@@ -483,14 +483,16 @@ export function hitSummary(
     let dm = 0;
     let dRec = 0;
     for (const e of d.entries) {
+      // Actuals are recorded per single account (copy-traded), so compare to
+      // the per-account base target, not the count-multiplied total.
       const actual = rec[hitKey(d.iso, e.accountId)];
-      const r = resultOf(actual, e.dailyTarget);
+      const r = resultOf(actual, e.perAccountTarget);
       if (r === "pending") {
         pending++;
         continue;
       }
       dRec++;
-      delta += (actual as number) - e.dailyTarget;
+      delta += (actual as number) - e.perAccountTarget;
       if (r === "hit") {
         hit++;
         dh++;

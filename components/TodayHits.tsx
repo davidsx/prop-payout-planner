@@ -42,7 +42,7 @@ export default function TodayHits({
     const active = idx >= 0;
     const phase = active ? phaseAtIndex(a, idx) : null;
     const perAcct = phase ? dailyBaseHit(a[phase], a.minDay) : 0;
-    const target = perAcct * a.count;
+    const target = perAcct; // per single account (copy-traded across the count)
     const actual = active ? rec[hitKey(todayISO, a.id)] : undefined;
     const result = resultOf(actual, target);
     return { a, active, idx, phase, perAcct, target, actual, result };
@@ -70,10 +70,12 @@ export default function TodayHits({
               {active ? (
                 <>
                   <span className="th-need">
-                    {a.count > 1 ? `${a.count} × ${money(perAcct)}` : money(perAcct)}
-                    <span className="th-sub"> /day target</span>
+                    {money(perAcct)}
+                    <span className="th-sub">
+                      {" "}
+                      /day per acct{a.count > 1 ? ` · ×${a.count}` : ""}
+                    </span>
                   </span>
-                  <span className="th-stage">{phase ? PHASE_LABEL[phase] : ""}</span>
                   <div className="th-actual">
                     <input
                       type="number"
@@ -95,6 +97,7 @@ export default function TodayHits({
                       </span>
                     )}
                   </div>
+                  {phase && <span className={`th-tag ${phase}`}>{PHASE_LABEL[phase]}</span>}
                 </>
               ) : (
                 <span className="th-status idle">No session today</span>

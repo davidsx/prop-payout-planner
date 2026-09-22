@@ -657,12 +657,13 @@ tfoot td {
   gap: 12px;
 }
 .th-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 3px;
   text-align: left;
-  padding: 14px 16px;
+  padding: 11px 13px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-elev);
@@ -689,30 +690,40 @@ tfoot td {
 }
 .th-name {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
+}
+.th-tag {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+  white-space: nowrap;
 }
 .th-day {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }
 .th-need {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .th-need .th-sub {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-.th-stage {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-dim);
 }
 .th-status {
   font-size: 11px;
@@ -741,13 +752,13 @@ tfoot td {
   margin-top: 2px;
 }
 .th-actual input {
-  width: 108px;
+  width: 96px;
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: var(--radius-sm);
-  padding: 7px 9px;
-  font-size: 14px;
+  padding: 6px 8px;
+  font-size: 13px;
   font-family: inherit;
 }
 .th-actual input:focus {
@@ -755,7 +766,7 @@ tfoot td {
   border-color: var(--accent);
 }
 .th-delta {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

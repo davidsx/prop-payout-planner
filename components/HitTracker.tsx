@@ -45,7 +45,8 @@ export default function HitTracker({
         let acctDelta = 0;
         const rows = days.map((iso, i) => {
           const phase = phaseAtIndex(a, i);
-          const target = (phase ? dailyBaseHit(a[phase], a.minDay) : 0) * a.count;
+          // Per single account (copy-traded across the count).
+          const target = phase ? dailyBaseHit(a[phase], a.minDay) : 0;
           const actual = rec[hitKey(iso, a.id)];
           const result = resultOf(actual, target);
           if (actual !== undefined) {
