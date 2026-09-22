@@ -7,6 +7,7 @@ import {
   dailyBaseHit,
   money,
   newId,
+  payoutTakeHome,
 } from "@/lib/calc";
 
 interface Props {
@@ -43,6 +44,7 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
 
   const remove = (id: string) => onChange(accounts.filter((a) => a.id !== id));
 
+  const grandPerPayout = accounts.reduce((s, a) => s + payoutTakeHome(a), 0);
   const grandTotal = accounts.reduce((s, a) => s + accountTakeHome(a), 0);
 
   return (
@@ -50,7 +52,7 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
       <table className="editor">
         <thead>
           <tr className="groups">
-            <th className="text" colSpan={8}></th>
+            <th className="text" colSpan={9}></th>
             <th className="grp-eval" colSpan={3}>
               Eval target
             </th>
@@ -69,7 +71,10 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
             <th>Count</th>
             <th>Payout</th>
             <th>Rate</th>
-            <th>Take-home</th>
+            <th title="Single payout × account count (count × payout × rate)">Take-home</th>
+            <th title="Take-home × all payout cycles (count² × payout × rate)">
+              Total take-home
+            </th>
             <th>Min day</th>
             <th className="grp-eval">Target</th>
             <th className="grp-eval">Days</th>
@@ -138,6 +143,7 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
                   }
                 />
               </td>
+              <td className="derived">{money(payoutTakeHome(a))}</td>
               <td className="derived">{money(accountTakeHome(a))}</td>
               <td>
                 <input
@@ -230,6 +236,7 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
           <tr>
             <td className="text">Total</td>
             <td colSpan={5}></td>
+            <td className="derived">{money(grandPerPayout)}</td>
             <td className="derived">{money(grandTotal)}</td>
             <td colSpan={12}></td>
           </tr>

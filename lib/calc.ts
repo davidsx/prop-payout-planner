@@ -72,6 +72,14 @@ export function dailyBaseHit(phase: Phase, minDay: number): number {
 }
 
 /**
+ * Take-home on a single payout day: the `count` parallel accounts all pay
+ * `payout * rate`, so one payout day is worth count * payout * rate.
+ */
+export function payoutTakeHome(a: Account): number {
+  return a.count * a.payout * a.rate;
+}
+
+/**
  * Total take-home for an account. `count` parallel accounts each pay out
  * `count` times over the plan (first target + re-hits of Remaining), and every
  * payout is `payout * rate`, so the total is count² * payout * rate.
