@@ -106,7 +106,8 @@ export default function Home() {
   const canPush = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Point the URL + localStorage at a space without reloading the page.
+  // Remember the current space in localStorage and keep the address bar clean
+  // (strip any ?space= param; sharing is done explicitly via "Copy link").
   const rememberSpace = (s: string) => {
     try {
       window.localStorage.setItem(SPACE_KEY, s);
@@ -114,8 +115,8 @@ export default function Home() {
       /* ignore */
     }
     const url = new URL(window.location.href);
-    if (url.searchParams.get("space") !== s) {
-      url.searchParams.set("space", s);
+    if (url.searchParams.has("space")) {
+      url.searchParams.delete("space");
       window.history.replaceState({}, "", url.toString());
     }
   };
@@ -334,11 +335,15 @@ export default function Home() {
   };
 
   const copySyncLink = async () => {
+    // The address bar stays clean; the shareable link carries the space id.
+    const url = new URL(window.location.href);
+    if (space) url.searchParams.set("space", space);
+    const link = url.toString();
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(link);
       alert("Sync link copied — open it on another device to see this version.");
     } catch {
-      alert(window.location.href);
+      alert(link);
     }
   };
 
