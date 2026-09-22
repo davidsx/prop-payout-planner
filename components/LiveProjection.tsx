@@ -53,8 +53,8 @@ export default function LiveProjection({ live }: Props) {
               <>
                 <div className="live-bar">
                   <div
-                    className="live-bar-fill"
-                    style={{ width: `${Math.round(a.pct * 100)}%` }}
+                    className={`live-bar-fill${a.earnedInPhase < 0 ? " neg" : ""}`}
+                    style={{ width: `${Math.min(100, Math.abs(Math.round(a.pct * 100)))}%` }}
                   />
                 </div>
                 <div className="live-line">
