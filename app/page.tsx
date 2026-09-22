@@ -5,6 +5,7 @@ import AccountEditor from "@/components/AccountEditor";
 import Calendar from "@/components/Calendar";
 import HitTracker from "@/components/HitTracker";
 import MonthlySummary from "@/components/MonthlySummary";
+import TodayHits from "@/components/TodayHits";
 import {
   Account,
   PlannerState,
@@ -87,6 +88,7 @@ export default function Home() {
   const [manageOpen, setManageOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [accountsLocked, setAccountsLocked] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [state, setState] = useState<PlannerState>({
     startDate: todayISO(),
     tradingDayMode: "weekdays",
@@ -670,14 +672,19 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <h2>Base hits</h2>
-          <span className="hit-stat streak">🔥 {hitStats.streak}-day clean streak</span>
+          <h2>Today&apos;s base hits</h2>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span className="hit-stat streak">🔥 {hitStats.streak}-day streak</span>
+            <button className="btn" onClick={() => setHistoryOpen(true)}>
+              Log past days →
+            </button>
+          </div>
         </div>
         <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
-          One box per trading day, per account. Click a box to toggle whether you hit
-          that day&apos;s base target — a quick log you can eyeball at a glance.
+          Tap each account to mark whether you hit today&apos;s base target. To review
+          or fix earlier days, open “Log past days”.
         </p>
-        <HitTracker
+        <TodayHits
           accounts={state.accounts}
           hits={state.hits}
           globalStart={state.startDate}
@@ -693,6 +700,31 @@ export default function Home() {
         </div>
         <MonthlySummary months={months} />
       </section>
+
+      {historyOpen && (
+        <div className="modal-overlay" onClick={() => setHistoryOpen(false)}>
+          <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Base hit history</h2>
+              <button className="btn ghost" onClick={() => setHistoryOpen(false)}>
+                Close
+              </button>
+            </div>
+            <p className="hint" style={{ marginBottom: 12 }}>
+              One box per trading day, per account. Click any box to toggle whether you
+              hit that day&apos;s base target.
+            </p>
+            <HitTracker
+              accounts={state.accounts}
+              hits={state.hits}
+              globalStart={state.startDate}
+              tradingDayMode={state.tradingDayMode}
+              todayISO={today}
+              onToggle={toggleHit}
+            />
+          </div>
+        </div>
+      )}
 
       <footer className="pagefoot">
         <span className="hint">

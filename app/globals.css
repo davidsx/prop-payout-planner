@@ -650,6 +650,60 @@ tfoot td {
 .ht-box.today {
   box-shadow: 0 0 0 2px var(--gold);
 }
+/* Today-only cards on the home page */
+.today-hits {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.th-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  color: var(--text);
+  transition: border-color 0.12s, background 0.12s;
+}
+.th-card:not(:disabled):hover {
+  border-color: var(--accent);
+}
+.th-card.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+.th-card.idle {
+  opacity: 0.55;
+  cursor: default;
+}
+.th-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.th-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+.th-card.on .th-status {
+  color: var(--accent-text);
+}
+.th-status.idle {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+.th-day {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+.modal.modal-wide {
+  max-width: 900px;
+}
 .cell .daynum {
   font-size: 12px;
   color: var(--text-dim);
