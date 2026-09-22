@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kvConfigured, planKey, redis, sanitizeSpace } from "@/lib/kv";
+import type { PlannerState } from "@/lib/calc";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PUT /api/plan?space=xyz  (body = PlannerState) -> { configured, ok }
+// PUT /api/plan?space=xyz  (body = PlannerState) -> { configured, ok, state }
 export async function PUT(req: NextRequest) {
   if (!kvConfigured || !redis) {
     return NextResponse.json({ configured: false, ok: false });
@@ -34,11 +35,34 @@ export async function PUT(req: NextRequest) {
   if (!body || typeof body !== "object" || !Array.isArray((body as { accounts?: unknown }).accounts)) {
     return NextResponse.json({ configured: true, ok: false, error: "invalid plan" }, { status: 400 });
   }
+  const now = Date.now();
+  const incoming = body as PlannerState;
+  const state: PlannerState = {
+    ...incoming,
+    name: (incoming.name || "").trim() || "Untitled",
+    createdAt: incoming.createdAt || now,
+    updatedAt: now,
+  };
   try {
-    await redis.set(planKey(space), body);
-    return NextResponse.json({ configured: true, ok: true });
+    await redis.set(planKey(space), state);
+    return NextResponse.json({ configured: true, ok: true, state });
   } catch (err) {
     console.error("KV PUT failed", err);
+    return NextResponse.json({ configured: true, ok: false, error: true }, { status: 502 });
+  }
+}
+
+// DELETE /api/plan?space=xyz  -> { configured, ok }
+export async function DELETE(req: NextRequest) {
+  if (!kvConfigured || !redis) {
+    return NextResponse.json({ configured: false, ok: false });
+  }
+  const space = sanitizeSpace(req.nextUrl.searchParams.get("space"));
+  try {
+    await redis.del(planKey(space));
+    return NextResponse.json({ configured: true, ok: true });
+  } catch (err) {
+    console.error("KV DELETE failed", err);
     return NextResponse.json({ configured: true, ok: false, error: true }, { status: 502 });
   }
 }

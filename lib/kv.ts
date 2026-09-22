@@ -32,3 +32,8 @@ export function sanitizeSpace(raw: string | null | undefined): string {
     .slice(0, 64);
   return v || "default";
 }
+
+/** Generate a fresh opaque space id (used when creating a new version). */
+export function randomSpace(): string {
+  return Math.random().toString(36).slice(2, 10);
+}

@@ -36,6 +36,21 @@ export interface PlannerState {
   startDate: string; // ISO yyyy-mm-dd
   tradingDayMode: TradingDayMode;
   accounts: Account[];
+  /** Human-readable label for this saved version. */
+  name?: string;
+  /** Epoch ms when this version was first created. */
+  createdAt?: number;
+  /** Epoch ms of the last write (server-stamped). */
+  updatedAt?: number;
+}
+
+/** Compact metadata for one saved version (used by the version manager). */
+export interface VersionMeta {
+  space: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  accountCount: number;
 }
 
 // ---------------------------------------------------------------------------

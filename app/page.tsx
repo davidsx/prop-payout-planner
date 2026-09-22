@@ -8,6 +8,7 @@ import {
   Account,
   PlannerState,
   TradingDayMode,
+  VersionMeta,
   accountTakeHome,
   accountTotalDays,
   buildSchedule,
@@ -22,6 +23,22 @@ const STORAGE_KEY = "prop-payout-planner:v1";
 const SPACE_KEY = "prop-payout-planner:space";
 
 type SyncStatus = "loading" | "synced" | "saving" | "local" | "error";
+
+function relativeTime(ts: number): string {
+  if (!ts) return "—";
+  const diff = Date.now() - ts;
+  const min = Math.round(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.round(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  return fromISO(toISO(new Date(ts))).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 function todayISO(): string {
   return toISO(new Date());
@@ -63,6 +80,9 @@ export default function Home() {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [space, setSpace] = useState<string>("");
   const [sync, setSync] = useState<SyncStatus>("loading");
+  const [versions, setVersions] = useState<VersionMeta[]>([]);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [state, setState] = useState<PlannerState>({
     startDate: todayISO(),
     tradingDayMode: "weekdays",
@@ -76,19 +96,8 @@ export default function Home() {
   const canPush = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Mount: load local cache and resolve the sync "space" (URL > localStorage > new).
-  useEffect(() => {
-    setState(loadState());
-    const params = new URLSearchParams(window.location.search);
-    let s = cleanSpace(params.get("space") || "");
-    if (!s) {
-      try {
-        s = cleanSpace(window.localStorage.getItem(SPACE_KEY) || "");
-      } catch {
-        /* ignore */
-      }
-    }
-    if (!s) s = Math.random().toString(36).slice(2, 10);
+  // Point the URL + localStorage at a space without reloading the page.
+  const rememberSpace = (s: string) => {
     try {
       window.localStorage.setItem(SPACE_KEY, s);
     } catch {
@@ -99,8 +108,62 @@ export default function Home() {
       url.searchParams.set("space", s);
       window.history.replaceState({}, "", url.toString());
     }
-    setSpace(s);
-    setMounted(true);
+  };
+
+  const refreshVersions = async () => {
+    try {
+      const r = await fetch("/api/plans");
+      const d = await r.json();
+      if (d.configured) setVersions(d.versions || []);
+      return d as { configured: boolean; versions?: VersionMeta[] };
+    } catch {
+      return { configured: false, versions: [] as VersionMeta[] };
+    }
+  };
+
+  // Mount: load local cache, then resolve which version to open —
+  //   URL ?space= (if it still exists) > most recently updated > create the first one.
+  useEffect(() => {
+    const local = loadState();
+    setState(local);
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlSpace = cleanSpace(params.get("space") || "");
+      const d = await refreshVersions();
+      if (!d.configured) {
+        setSync("local"); // no backend — local-only
+        setMounted(true);
+        return;
+      }
+      const list = d.versions || [];
+      let target = "";
+      if (urlSpace && list.some((v) => v.space === urlSpace)) {
+        target = urlSpace;
+      } else if (list.length > 0) {
+        target = list[0].space; // newest updated
+      }
+      if (!target) {
+        // Empty store — seed the first version from whatever is local.
+        const res = await fetch("/api/plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: local, name: "Version 1" }),
+        })
+          .then((r) => r.json())
+          .catch(() => null);
+        if (res?.ok) {
+          target = res.space;
+          await refreshVersions();
+        }
+      }
+      if (target) {
+        rememberSpace(target);
+        setSpace(target); // triggers the load effect
+      } else {
+        setSync("error");
+      }
+      setMounted(true);
+    })();
   }, []);
 
   // Load from the server whenever the space changes.
@@ -122,14 +185,7 @@ export default function Home() {
           canPush.current = true;
           setSync("synced");
         } else {
-          // Empty space — seed it with whatever we have locally.
-          canPush.current = true;
-          setSync("synced");
-          fetch(`/api/plan?space=${encodeURIComponent(space)}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(stateRef.current),
-          }).catch(() => setSync("error"));
+          setSync("error"); // version missing (e.g. deleted elsewhere)
         }
       })
       .catch(() => {
@@ -158,29 +214,119 @@ export default function Home() {
         body: JSON.stringify(state),
       })
         .then((r) => r.json())
-        .then((d) => setSync(d.configured ? "synced" : "local"))
+        .then((d) => {
+          setSync(d.configured ? "synced" : "local");
+          // Reflect the new name/updatedAt in the local version list.
+          if (d.ok && d.state) {
+            setVersions((vs) =>
+              vs.map((v) =>
+                v.space === space
+                  ? {
+                      ...v,
+                      name: d.state.name,
+                      updatedAt: d.state.updatedAt,
+                      accountCount: d.state.accounts?.length ?? v.accountCount,
+                    }
+                  : v,
+              ),
+            );
+          }
+        })
         .catch(() => setSync("error"));
     }, 700);
   }, [state, mounted, space]);
 
-  const switchSpace = (raw: string) => {
-    const s = cleanSpace(raw);
+  // Switch to an existing version.
+  const switchSpace = (s: string) => {
     if (!s || s === space) return;
-    try {
-      window.localStorage.setItem(SPACE_KEY, s);
-    } catch {
-      /* ignore */
-    }
-    const url = new URL(window.location.href);
-    url.searchParams.set("space", s);
-    window.history.replaceState({}, "", url.toString());
+    rememberSpace(s);
     setSpace(s); // triggers reload effect
+    setManageOpen(false);
+  };
+
+  // Duplicate the current plan into a brand-new version and switch to it.
+  const duplicateCurrent = async () => {
+    setBusy(true);
+    try {
+      const baseName = (stateRef.current.name || "Untitled").replace(/^Copy of /, "");
+      const res = await fetch("/api/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: stateRef.current, name: `Copy of ${baseName}` }),
+      })
+        .then((r) => r.json())
+        .catch(() => null);
+      if (res?.ok) {
+        await refreshVersions();
+        rememberSpace(res.space);
+        setSpace(res.space);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Rename a version. If it's the current one, edit state so the save effect carries it.
+  const renameVersion = async (s: string, name: string) => {
+    const clean = name.trim();
+    if (!clean) return;
+    if (s === space) {
+      setState((st) => ({ ...st, name: clean }));
+      setVersions((vs) => vs.map((v) => (v.space === s ? { ...v, name: clean } : v)));
+      return;
+    }
+    const cur = await fetch(`/api/plan?space=${encodeURIComponent(s)}`)
+      .then((r) => r.json())
+      .catch(() => null);
+    if (!cur?.state) return;
+    await fetch(`/api/plan?space=${encodeURIComponent(s)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...cur.state, name: clean }),
+    }).catch(() => null);
+    await refreshVersions();
+  };
+
+  // Delete a version. If it's the current one, fall back to the newest remaining.
+  const deleteVersion = async (s: string) => {
+    const meta = versions.find((v) => v.space === s);
+    if (!confirm(`Delete version "${meta?.name || s}"? This cannot be undone.`)) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/plan?space=${encodeURIComponent(s)}`, { method: "DELETE" }).catch(
+        () => null,
+      );
+      const d = await refreshVersions();
+      const list = d.versions || [];
+      if (s === space) {
+        if (list.length > 0) {
+          rememberSpace(list[0].space);
+          setSpace(list[0].space);
+        } else {
+          // Nothing left — recreate a fresh version from the current state.
+          const res = await fetch("/api/plans", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state: stateRef.current, name: "Version 1" }),
+          })
+            .then((r) => r.json())
+            .catch(() => null);
+          if (res?.ok) {
+            await refreshVersions();
+            rememberSpace(res.space);
+            setSpace(res.space);
+          }
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const copySyncLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      alert("Sync link copied — open it on another device to see the same plan.");
+      alert("Sync link copied — open it on another device to see this version.");
     } catch {
       alert(window.location.href);
     }
@@ -276,28 +422,110 @@ export default function Home() {
           {sync === "local" && "Local only (no cloud configured)"}
           {sync === "error" && "Sync error — saved locally"}
         </span>
-        <div className="field sync-space">
-          <label htmlFor="space">Sync space</label>
-          <input
-            id="space"
-            defaultValue={space}
-            key={space}
-            placeholder="space id"
-            onBlur={(e) => switchSpace(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-            }}
-          />
-        </div>
+        {sync !== "local" && (
+          <>
+            <div className="field sync-space">
+              <label htmlFor="space">Version</label>
+              <select
+                id="space"
+                value={space}
+                onChange={(e) => switchSpace(e.target.value)}
+                disabled={busy || versions.length === 0}
+              >
+                {versions.length === 0 && <option value="">—</option>}
+                {versions.map((v) => (
+                  <option key={v.space} value={v.space}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button className="btn" onClick={duplicateCurrent} disabled={busy || !space}>
+              Duplicate
+            </button>
+            <button
+              className="btn"
+              onClick={() => setManageOpen(true)}
+              disabled={busy || versions.length === 0}
+            >
+              Manage
+            </button>
+          </>
+        )}
         <button className="btn" onClick={copySyncLink} disabled={sync === "local"}>
-          Copy sync link
+          Copy link
         </button>
         <span className="hint">
           {sync === "local"
-            ? "Set KV_REST_API_URL / KV_REST_API_TOKEN to enable cross-device sync."
-            : "Open the copied link on another device to load the same plan."}
+            ? "Set KV_REST_API_URL / KV_REST_API_TOKEN to enable cloud sync + versions."
+            : "Edits save to the current version. Duplicate to branch a new one."}
         </span>
       </div>
+
+      {manageOpen && (
+        <div className="modal-overlay" onClick={() => setManageOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Manage versions</h2>
+              <button className="btn ghost" onClick={() => setManageOpen(false)}>
+                Close
+              </button>
+            </div>
+            <p className="hint" style={{ marginBottom: 12 }}>
+              Each version is an independent saved plan. Editing updates the open
+              version; “Duplicate” branches a new one.
+            </p>
+            <div className="version-list">
+              {versions.map((v) => (
+                <div
+                  key={v.space}
+                  className={`version-row${v.space === space ? " active" : ""}`}
+                >
+                  <input
+                    className="version-name"
+                    defaultValue={v.name}
+                    key={`${v.space}:${v.name}`}
+                    onBlur={(e) => renameVersion(v.space, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
+                  />
+                  <span className="version-meta">
+                    {v.accountCount} acct{v.accountCount === 1 ? "" : "s"} ·{" "}
+                    {relativeTime(v.updatedAt)}
+                  </span>
+                  <div className="version-actions">
+                    {v.space === space ? (
+                      <span className="version-current">Open</span>
+                    ) : (
+                      <button
+                        className="btn"
+                        onClick={() => switchSpace(v.space)}
+                        disabled={busy}
+                      >
+                        Open
+                      </button>
+                    )}
+                    <button
+                      className="btn icon"
+                      title="Delete version"
+                      onClick={() => deleteVersion(v.space)}
+                      disabled={busy}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <button className="btn primary" onClick={duplicateCurrent} disabled={busy}>
+                + Duplicate current version
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="stats">
         <div className="stat">
