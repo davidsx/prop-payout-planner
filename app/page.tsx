@@ -648,6 +648,15 @@ export default function Home() {
             >
               📈 Live {liveMode ? "on" : "off"}
             </button>
+            {hitStats.pending > 0 && (
+              <button
+                className="btn warn"
+                onClick={() => setHistoryOpen(true)}
+                title="You have days without a recorded result"
+              >
+                ⚠ {hitStats.pending} to log
+              </button>
+            )}
             <button className="btn" onClick={() => setHistoryOpen(true)}>
               Log past days →
             </button>

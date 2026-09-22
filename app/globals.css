@@ -369,6 +369,15 @@ select {
 .btn.ghost {
   background: transparent;
 }
+.btn.warn {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 650;
+}
+.btn.warn:hover {
+  border-color: var(--gold);
+}
 .btn.icon {
   padding: 6px 9px;
   color: var(--text-faint);
