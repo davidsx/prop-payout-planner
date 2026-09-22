@@ -746,13 +746,21 @@ tfoot td {
   }
   .controls {
     width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: end;
   }
   .controls .field {
-    flex: 1;
+    min-width: 0;
   }
   .controls .field input,
   .controls .field select {
     width: 100%;
+  }
+  /* Reset spans the full row under the two fields. */
+  .controls > .btn {
+    grid-column: 1 / -1;
   }
   /* Swap the month grid for the vertical agenda. */
   .cal-grid {

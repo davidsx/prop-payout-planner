@@ -15,9 +15,16 @@ interface Props {
   accounts: Account[];
   onChange: (next: Account[]) => void;
   globalStart: string;
+  /** When true, the table is read-only (inputs and buttons are non-interactive). */
+  locked?: boolean;
 }
 
-export default function AccountEditor({ accounts, onChange, globalStart }: Props) {
+export default function AccountEditor({
+  accounts,
+  onChange,
+  globalStart,
+  locked = false,
+}: Props) {
   const update = (id: string, mutate: (a: Account) => Account) =>
     onChange(accounts.map((a) => (a.id === id ? mutate({ ...a }) : a)));
 
@@ -50,7 +57,9 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
 
   return (
     <div className="table-scroll">
-      <table className="editor">
+      {/* `inert` makes every input/button inside non-interactive while locked,
+          but keeps the values fully readable and the container scrollable. */}
+      <table className="editor" inert={locked}>
         <thead>
           <tr className="groups">
             <th className="text" colSpan={10}></th>

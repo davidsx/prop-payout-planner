@@ -83,6 +83,7 @@ export default function Home() {
   const [versions, setVersions] = useState<VersionMeta[]>([]);
   const [manageOpen, setManageOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [accountsLocked, setAccountsLocked] = useState(true);
   const [state, setState] = useState<PlannerState>({
     startDate: todayISO(),
     tradingDayMode: "weekdays",
@@ -552,36 +553,46 @@ export default function Home() {
       <section className="section">
         <div className="section-head">
           <h2>Accounts</h2>
+          <button
+            className={`btn${accountsLocked ? "" : " primary"}`}
+            onClick={() => setAccountsLocked((v) => !v)}
+            title={accountsLocked ? "Unlock to edit accounts" : "Lock to prevent edits"}
+          >
+            {accountsLocked ? "🔒 Locked" : "🔓 Unlocked"}
+          </button>
         </div>
         <AccountEditor
           accounts={state.accounts}
           onChange={setAccounts}
           globalStart={state.startDate}
+          locked={accountsLocked}
         />
-        <div style={{ marginTop: 10 }}>
-          <button
-            className="btn primary"
-            onClick={() =>
-              setAccounts([
-                ...state.accounts,
-                {
-                  id: `acct-${Date.now().toString(36)}`,
-                  firm: "New firm",
-                  size: "50k",
-                  count: 1,
-                  payout: 2000,
-                  rate: 0.9,
-                  minDay: 200,
-                  eval: { target: 3000, days: 5 },
-                  first: { target: 4000, days: 10 },
-                  remaining: { target: 2000, days: 10 },
-                },
-              ])
-            }
-          >
-            + Add account
-          </button>
-        </div>
+        {!accountsLocked && (
+          <div style={{ marginTop: 10 }}>
+            <button
+              className="btn primary"
+              onClick={() =>
+                setAccounts([
+                  ...state.accounts,
+                  {
+                    id: `acct-${Date.now().toString(36)}`,
+                    firm: "New firm",
+                    size: "50k",
+                    count: 1,
+                    payout: 2000,
+                    rate: 0.9,
+                    minDay: 200,
+                    eval: { target: 3000, days: 5 },
+                    first: { target: 4000, days: 10 },
+                    remaining: { target: 2000, days: 10 },
+                  },
+                ])
+              }
+            >
+              + Add account
+            </button>
+          </div>
+        )}
         <p className="hint" style={{ marginTop: 8 }}>
           Per-account daily target = max(phase target ÷ days, min day). Count = number
           of parallel accounts, so the calendar&apos;s daily target = count × that. Cycle =
