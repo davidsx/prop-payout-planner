@@ -744,12 +744,12 @@ tfoot td {
   .title {
     font-size: 22px;
   }
+  /* Stack Start date, Trading days and Reset one per row. */
   .controls {
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
-    align-items: end;
   }
   .controls .field {
     min-width: 0;
@@ -757,10 +757,6 @@ tfoot td {
   .controls .field input,
   .controls .field select {
     width: 100%;
-  }
-  /* Reset spans the full row under the two fields. */
-  .controls > .btn {
-    grid-column: 1 / -1;
   }
   /* Swap the month grid for the vertical agenda. */
   .cal-grid {
