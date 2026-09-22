@@ -187,23 +187,25 @@ export default function Calendar({
                 </div>
               )}
 
-              {info && info.payoutTotal > 0 ? (
-                <div className="payout-pill" title="Take-home this day">
-                  💰 {money(info.payoutTotal)}
+              {info && (info.entries.length > 0 || info.payoutTotal > 0) && (
+                <div className="cell-foot">
+                  {info.entries.length > 0 && (
+                    <div className="dots">
+                      {info.entries.map((e, k) => (
+                        <span
+                          key={k}
+                          className={`dot ${e.phase}`}
+                          title={`${e.firm} ${e.size}${e.count > 1 ? ` ×${e.count}` : ""} — ${PHASE_LABEL[e.phase]} · ${money(e.dailyTarget)}/day`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {info.payoutTotal > 0 && (
+                    <div className="payout-pill" title="Take-home this day">
+                      💰 {money(info.payoutTotal)}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                info &&
-                info.entries.length > 0 && (
-                  <div className="dots">
-                    {info.entries.map((e, k) => (
-                      <span
-                        key={k}
-                        className={`dot ${e.phase}`}
-                        title={`${e.firm} ${e.size}${e.count > 1 ? ` ×${e.count}` : ""} — ${PHASE_LABEL[e.phase]} · ${money(e.dailyTarget)}/day`}
-                      />
-                    ))}
-                  </div>
-                )
               )}
             </div>
           );

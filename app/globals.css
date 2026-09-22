@@ -949,11 +949,17 @@ tfoot td {
   letter-spacing: 0.04em;
   display: block;
 }
+.cell-foot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 .dots {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  margin-top: auto;
+  flex-shrink: 0;
 }
 .dot {
   width: 7px;
@@ -970,7 +976,6 @@ tfoot td {
   background: var(--violet);
 }
 .payout-pill {
-  margin-top: auto;
   background: var(--gold-dim);
   color: var(--gold);
   border-radius: 5px;
@@ -980,7 +985,13 @@ tfoot td {
   font-variant-numeric: tabular-nums;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 3px;
+}
+/* In the grid cell, the payout badge fills the space beside the dots. */
+.cell-foot .payout-pill {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ---- Mobile agenda (hidden on wide screens) ---- */
