@@ -247,7 +247,7 @@ export interface Schedule {
 /**
  * Which phase an account is in on trading-day index `i` (0-based), or null if done.
  */
-function phaseAtIndex(a: Account, i: number): PhaseKey | null {
+export function phaseAtIndex(a: Account, i: number): PhaseKey | null {
   const e = phaseDays(a.eval);
   const f = phaseDays(a.first);
   const r = remainingSpanDays(a);

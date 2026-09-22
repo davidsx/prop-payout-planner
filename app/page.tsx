@@ -623,6 +623,30 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
+          <h2>Today&apos;s base hits</h2>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <span className="hit-stat streak">🔥 {hitStats.streak}-day streak</span>
+            <button className="btn" onClick={() => setHistoryOpen(true)}>
+              Log past days →
+            </button>
+          </div>
+        </div>
+        <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
+          Tap each account to mark whether you hit today&apos;s base target. To review
+          or fix earlier days, open “Log past days”.
+        </p>
+        <TodayHits
+          accounts={state.accounts}
+          hits={state.hits}
+          globalStart={state.startDate}
+          tradingDayMode={state.tradingDayMode}
+          todayISO={today}
+          onToggle={toggleHit}
+        />
+      </section>
+
+      <section className="section">
+        <div className="section-head">
           <h2>Calendar</h2>
           <div className="field" style={{ minWidth: 220 }}>
             <label htmlFor="focus">Focus</label>
@@ -667,30 +691,6 @@ export default function Home() {
           tradingDayMode={state.tradingDayMode}
           todayISO={today}
           hits={state.hits}
-        />
-      </section>
-
-      <section className="section">
-        <div className="section-head">
-          <h2>Today&apos;s base hits</h2>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <span className="hit-stat streak">🔥 {hitStats.streak}-day streak</span>
-            <button className="btn" onClick={() => setHistoryOpen(true)}>
-              Log past days →
-            </button>
-          </div>
-        </div>
-        <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
-          Tap each account to mark whether you hit today&apos;s base target. To review
-          or fix earlier days, open “Log past days”.
-        </p>
-        <TodayHits
-          accounts={state.accounts}
-          hits={state.hits}
-          globalStart={state.startDate}
-          tradingDayMode={state.tradingDayMode}
-          todayISO={today}
-          onToggle={toggleHit}
         />
       </section>
 
