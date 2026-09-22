@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AccountEditor from "@/components/AccountEditor";
 import Calendar from "@/components/Calendar";
 import HitTracker from "@/components/HitTracker";
+import LiveProjection from "@/components/LiveProjection";
 import MonthlySummary from "@/components/MonthlySummary";
 import TodayHits from "@/components/TodayHits";
 import {
@@ -17,6 +18,7 @@ import {
   fromISO,
   hitKey,
   hitSummary,
+  liveProjection,
   money,
   monthlySummary,
   seedAccounts,
@@ -89,6 +91,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [accountsLocked, setAccountsLocked] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
   const [state, setState] = useState<PlannerState>({
     startDate: todayISO(),
     tradingDayMode: "weekdays",
@@ -357,6 +360,10 @@ export default function Home() {
     () => hitSummary(fullSchedule, state.actuals, today),
     [fullSchedule, state.actuals, today],
   );
+  const liveStats = useMemo(
+    () => liveProjection(state, state.actuals, today),
+    [state, today],
+  );
 
   const setAccounts = (accounts: Account[]) => setState((s) => ({ ...s, accounts }));
   const setStart = (startDate: string) => setState((s) => ({ ...s, startDate }));
@@ -624,16 +631,23 @@ export default function Home() {
       <section className="section">
         <div className="section-head">
           <h2>Today&apos;s base hits</h2>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <span className="hit-stat streak">🔥 {hitStats.streak}-day streak</span>
+            <button
+              className={`btn${liveMode ? " primary" : ""}`}
+              onClick={() => setLiveMode((v) => !v)}
+              title="Recalculate the plan live from your recorded actuals"
+            >
+              📈 Live {liveMode ? "on" : "off"}
+            </button>
             <button className="btn" onClick={() => setHistoryOpen(true)}>
               Log past days →
             </button>
           </div>
         </div>
         <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
-          Tap each account to mark whether you hit today&apos;s base target. To review
-          or fix earlier days, open “Log past days”.
+          Enter each account&apos;s actual result for today. To review or fix earlier
+          days, open “Log past days”.
         </p>
         <TodayHits
           accounts={state.accounts}
@@ -644,6 +658,19 @@ export default function Home() {
           onSetActual={setActual}
         />
       </section>
+
+      {liveMode && (
+        <section className="section">
+          <div className="section-head">
+            <h2>Live projection</h2>
+          </div>
+          <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
+            Recalculated from your recorded actuals — unlogged days assume the plan
+            pace, so more/less than target pulls each payout date earlier/later.
+          </p>
+          <LiveProjection live={liveStats} />
+        </section>
+      )}
 
       <section className="section">
         <div className="section-head">

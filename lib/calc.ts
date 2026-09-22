@@ -516,6 +516,168 @@ export function hitSummary(
 }
 
 // ---------------------------------------------------------------------------
+// Live projection — recompute the plan from the recorded daily actuals
+// ---------------------------------------------------------------------------
+
+interface LiveStep {
+  key: PhaseKey;
+  target: number; // profit needed to complete this step
+  pace: number; // assumed daily profit for unlogged days
+  payout: boolean; // whether completing it fires a payout
+}
+
+/** Ordered profit milestones for an account: eval → 1st target → each cycle. */
+function liveSteps(a: Account): LiveStep[] {
+  const steps: LiveStep[] = [];
+  if (phaseDays(a.eval) > 0) {
+    steps.push({ key: "eval", target: a.eval.target, pace: dailyBaseHit(a.eval, a.minDay), payout: false });
+  }
+  if (a.first.target > 0) {
+    steps.push({ key: "first", target: a.first.target, pace: dailyBaseHit(a.first, a.minDay), payout: true });
+  }
+  const extra = Math.max(0, cyclesOf(a) - 1);
+  for (let k = 0; k < extra; k++) {
+    steps.push({ key: "remaining", target: a.remaining.target, pace: dailyBaseHit(a.remaining, a.minDay), payout: true });
+  }
+  return steps;
+}
+
+interface WalkResult {
+  payouts: string[]; // ISO dates a payout fires
+  finish: string | null; // ISO date the last step completes
+  snapStep: number; // step index in progress as of today
+  snapAcc: number; // profit accumulated toward that step as of today
+  started: boolean;
+  delta: number; // (actual − pace) summed over logged days up to today
+}
+
+function walkAccount(
+  a: Account,
+  steps: LiveStep[],
+  isoList: string[],
+  actuals: Record<string, number> | undefined,
+  todayISO: string,
+): WalkResult {
+  let si = 0;
+  let acc = 0;
+  let delta = 0;
+  let snapStep = 0;
+  let snapAcc = 0;
+  let started = false;
+  const payouts: string[] = [];
+  let finish: string | null = null;
+
+  for (let p = 0; p < isoList.length && si < steps.length; p++) {
+    if (steps[si].pace <= 0) break; // can't make progress; leave unfinished
+    const iso = isoList[p];
+    const pace = steps[si].pace;
+    const amt = actuals?.[hitKey(iso, a.id)] ?? pace;
+    if (iso <= todayISO) delta += amt - pace;
+    acc += amt;
+    while (si < steps.length && steps[si].pace > 0 && acc >= steps[si].target) {
+      acc -= steps[si].target;
+      if (steps[si].payout) payouts.push(iso);
+      si += 1;
+      if (si >= steps.length) {
+        finish = iso;
+        break;
+      }
+    }
+    if (iso <= todayISO) {
+      snapStep = si;
+      snapAcc = acc;
+      started = true;
+    }
+  }
+  return { payouts, finish, snapStep, snapAcc, started, delta };
+}
+
+export interface AccountLive {
+  accountId: string;
+  firm: string;
+  size: string;
+  started: boolean;
+  done: boolean;
+  phaseKey: PhaseKey | null;
+  phaseLabel: string;
+  payoutNo: number; // which payout the current phase leads to (1-based)
+  totalPayouts: number;
+  earnedInPhase: number;
+  phaseTarget: number;
+  remaining: number;
+  pct: number; // 0..1 progress toward the current phase target
+  paceDelta: number; // ahead(+)/behind(−) vs plan, cumulative to today
+  nextPayoutPlanISO: string | null;
+  nextPayoutLiveISO: string | null;
+  onTimeDailyNeeded: number | null; // $/day to hit next payout by its plan date
+  finishPlanISO: string | null;
+  finishLiveISO: string | null;
+}
+
+/**
+ * Per-account live status driven by recorded actuals. Unlogged days (past or
+ * future) are assumed to hit the plan's daily pace, so with no actuals the live
+ * projection matches the plan; over/under-performance shifts the dates.
+ */
+export function liveProjection(
+  state: PlannerState,
+  actuals: Record<string, number> | undefined,
+  todayISO: string,
+): AccountLive[] {
+  return state.accounts.map((a) => {
+    const steps = liveSteps(a);
+    const totalPayouts = steps.filter((s) => s.payout).length;
+    const start = a.startDate || state.startDate;
+    const horizon = Math.max(1, accountTotalDays(a) + 150);
+    const isoList = tradingDates(start, horizon, state.tradingDayMode);
+
+    const live = walkAccount(a, steps, isoList, actuals, todayISO);
+    const plan = walkAccount(a, steps, isoList, undefined, todayISO);
+
+    const done = live.snapStep >= steps.length;
+    const cur = done ? null : steps[live.snapStep];
+    const phaseTarget = cur ? cur.target : 0;
+    const earnedInPhase = done ? 0 : live.snapAcc;
+    const remaining = cur ? Math.max(0, cur.target - live.snapAcc) : 0;
+    const pct = cur && cur.target > 0 ? Math.min(1, live.snapAcc / cur.target) : done ? 1 : 0;
+    const payoutNo = Math.min(totalPayouts, steps.slice(0, live.snapStep + 1).filter((s) => s.payout).length || 1);
+
+    const nextPayoutLiveISO = live.payouts.find((d) => d > todayISO) ?? null;
+    const nextPayoutPlanISO = plan.payouts.find((d) => d > todayISO) ?? null;
+
+    // Days from tomorrow through the plan's next payout (inclusive), on the
+    // account's own trading calendar — used for the on-time daily figure.
+    let onTimeDailyNeeded: number | null = null;
+    if (!done && nextPayoutPlanISO && remaining > 0) {
+      const daysLeft = isoList.filter((d) => d > todayISO && d <= nextPayoutPlanISO).length;
+      onTimeDailyNeeded = daysLeft > 0 ? remaining / daysLeft : Infinity;
+    }
+
+    return {
+      accountId: a.id,
+      firm: a.firm,
+      size: a.size,
+      started: live.started,
+      done,
+      phaseKey: cur ? cur.key : null,
+      phaseLabel: cur ? PHASE_LABEL[cur.key] : "Complete",
+      payoutNo,
+      totalPayouts,
+      earnedInPhase,
+      phaseTarget,
+      remaining,
+      pct,
+      paceDelta: live.delta,
+      nextPayoutPlanISO,
+      nextPayoutLiveISO,
+      onTimeDailyNeeded,
+      finishPlanISO: plan.finish,
+      finishLiveISO: live.finish,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Formatting + seed data
 // ---------------------------------------------------------------------------
 
