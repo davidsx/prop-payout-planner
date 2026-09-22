@@ -71,14 +71,28 @@ export function dailyBaseHit(phase: Phase, minDay: number): number {
   return Math.max(Math.round(phase.target / phase.days), minDay);
 }
 
-/** Total take-home for an account = count * payout * rate. */
+/**
+ * Total take-home for an account. `count` parallel accounts each pay out
+ * `count` times over the plan (first target + re-hits of Remaining), and every
+ * payout is `payout * rate`, so the total is count² * payout * rate.
+ */
 export function accountTakeHome(a: Account): number {
-  return a.count * a.payout * a.rate;
+  return a.count * a.count * a.payout * a.rate;
+}
+
+/**
+ * Trading days the Remaining phase occupies. `remaining.days` is the cadence
+ * for ONE payout cycle, and there are `count - 1` cycles after the first
+ * payout, so the phase spans (count - 1) × remaining.days days.
+ */
+export function remainingSpanDays(a: Account): number {
+  const cycles = Math.max(0, a.count - 1);
+  return phaseDays(a.remaining) * cycles;
 }
 
 /** Total budgeted trading days for an account across all three phases. */
 export function accountTotalDays(a: Account): number {
-  return phaseDays(a.eval) + phaseDays(a.first) + phaseDays(a.remaining);
+  return phaseDays(a.eval) + phaseDays(a.first) + remainingSpanDays(a);
 }
 
 export function phasesOf(a: Account): { key: PhaseKey; phase: Phase }[] {
@@ -204,7 +218,7 @@ export interface Schedule {
 function phaseAtIndex(a: Account, i: number): PhaseKey | null {
   const e = phaseDays(a.eval);
   const f = phaseDays(a.first);
-  const r = phaseDays(a.remaining);
+  const r = remainingSpanDays(a);
   if (i < e) return "eval";
   if (i < e + f) return "first";
   if (i < e + f + r) return "remaining";
@@ -212,25 +226,27 @@ function phaseAtIndex(a: Account, i: number): PhaseKey | null {
 }
 
 /**
- * Payout events for an account. There are `count` payouts of `payout * rate`
- * each: one when the 1st target is first reached (end of the 1st-target phase),
- * then one each time the Remaining target is reached again — the remaining
- * `count - 1` payouts spread evenly across the Remaining phase, the last one on
- * its final day. Eval never pays out. Amounts always sum to
- * `count * payout * rate`.
+ * Payout events for an account. There are `count` payout DAYS: one when the 1st
+ * target is first reached (end of the 1st-target phase), then one at the end of
+ * each subsequent Remaining cycle. `remaining.days` is the length of ONE cycle,
+ * so the remaining `count - 1` payouts land every `remaining.days` trading days
+ * after the first. Eval never pays out.
+ *
+ * Because `count` parallel accounts all hit each milestone together, every
+ * payout day is worth `count * payout * rate`. Amounts therefore sum to
+ * `count² * payout * rate`.
  */
 function payoutIndicesFor(
   a: Account,
 ): { index: number; amount: number; milestone: "first" | "remaining" }[] {
   const events: { index: number; amount: number; milestone: "first" | "remaining" }[] = [];
-  const each = a.payout * a.rate;
+  const each = a.payout * a.rate * a.count;
   if (a.count <= 0 || each <= 0) return events;
 
   const eEnd = phaseDays(a.eval);
   const fDays = phaseDays(a.first);
-  const rDays = phaseDays(a.remaining);
+  const rDays = phaseDays(a.remaining); // trading days per Remaining cycle
   const fEnd = eEnd + fDays;
-  const rEnd = fEnd + rDays;
 
   // First payout: last day of the 1st-target phase (fall back to eval end).
   const firstIdx = Math.max(0, (fDays > 0 ? fEnd : eEnd) - 1);
@@ -238,17 +254,12 @@ function payoutIndicesFor(
 
   const rest = a.count - 1;
   if (rest > 0 && rDays > 0) {
+    // One payout at the end of each cycle: firstIdx + k × remaining.days.
     for (let k = 1; k <= rest; k++) {
-      const frac = k / rest;
-      const idx = fEnd + Math.ceil(frac * rDays) - 1;
-      events.push({
-        index: Math.min(idx, rEnd - 1),
-        amount: each,
-        milestone: "remaining",
-      });
+      events.push({ index: firstIdx + k * rDays, amount: each, milestone: "remaining" });
     }
   } else if (rest > 0) {
-    // No remaining window — pile the rest onto the first payout day.
+    // No remaining cadence — pile the rest onto the first payout day.
     events.push({ index: firstIdx, amount: rest * each, milestone: "remaining" });
   }
   return events;

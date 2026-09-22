@@ -584,9 +584,11 @@ export default function Home() {
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
           Per-account daily target = max(phase target ÷ days, min day). Count = number
-          of parallel accounts, so the calendar's daily target = count × that. Take-home
-          = count × payout × rate, paid when each row completes its plan. Everything runs
-          in parallel from the start date.
+          of parallel accounts, so the calendar&apos;s daily target = count × that. Each
+          account pays out count times (first target + re-hits of Remaining); since the
+          accounts run in parallel, every payout day is worth count × payout × rate, and
+          total take-home = count² × payout × rate. Everything runs in parallel from the
+          start date.
         </p>
       </section>
 
