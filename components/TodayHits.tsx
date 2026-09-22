@@ -96,8 +96,10 @@ export default function TodayHits({
                         {money(Math.abs(delta))}
                       </span>
                     )}
+                    {phase && (
+                      <span className={`th-tag ${phase}`}>{PHASE_LABEL[phase]}</span>
+                    )}
                   </div>
-                  {phase && <span className={`th-tag ${phase}`}>{PHASE_LABEL[phase]}</span>}
                 </>
               ) : (
                 <span className="th-status idle">No session today</span>

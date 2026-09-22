@@ -693,9 +693,8 @@ tfoot td {
   font-size: 13px;
 }
 .th-tag {
-  position: absolute;
-  right: 12px;
-  bottom: 10px;
+  margin-left: auto;
+  align-self: center;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
