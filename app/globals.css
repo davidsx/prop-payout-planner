@@ -162,6 +162,10 @@ select {
   border: 1px solid var(--border);
   align-self: center;
 }
+/* Sync status sits at the right-middle of the version bar. */
+.syncbar .sync-pill {
+  margin-left: auto;
+}
 .sync-dot {
   width: 8px;
   height: 8px;
@@ -277,6 +281,16 @@ select {
   padding: 7px 12px;
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
+}
+
+/* ---- Page footer note ---- */
+.pagefoot {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
+.pagefoot .hint {
+  display: block;
 }
 
 /* ---- Stat cards ---- */

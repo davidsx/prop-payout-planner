@@ -414,14 +414,6 @@ export default function Home() {
       </header>
 
       <div className="syncbar">
-        <span className={`sync-pill ${sync}`}>
-          <span className="sync-dot" />
-          {sync === "loading" && "Loading…"}
-          {sync === "saving" && "Saving…"}
-          {sync === "synced" && "Synced to cloud"}
-          {sync === "local" && "Local only (no cloud configured)"}
-          {sync === "error" && "Sync error — saved locally"}
-        </span>
         {sync !== "local" && (
           <>
             <div className="field sync-space">
@@ -455,10 +447,13 @@ export default function Home() {
         <button className="btn" onClick={copySyncLink} disabled={sync === "local"}>
           Copy link
         </button>
-        <span className="hint">
-          {sync === "local"
-            ? "Set KV_REST_API_URL / KV_REST_API_TOKEN to enable cloud sync + versions."
-            : "Edits save to the current version. Duplicate to branch a new one."}
+        <span className={`sync-pill ${sync}`}>
+          <span className="sync-dot" />
+          {sync === "loading" && "Loading…"}
+          {sync === "saving" && "Saving…"}
+          {sync === "synced" && "Synced to cloud"}
+          {sync === "local" && "Local only (no cloud configured)"}
+          {sync === "error" && "Sync error — saved locally"}
         </span>
       </div>
 
@@ -636,6 +631,14 @@ export default function Home() {
         </div>
         <MonthlySummary months={months} />
       </section>
+
+      <footer className="pagefoot">
+        <span className="hint">
+          {sync === "local"
+            ? "Set KV_REST_API_URL / KV_REST_API_TOKEN to enable cloud sync + versions."
+            : "Edits save to the current version. Duplicate to branch a new one."}
+        </span>
+      </footer>
     </div>
   );
 }
