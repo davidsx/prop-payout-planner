@@ -1,136 +1,127 @@
 "use client";
 
+import { useState } from "react";
 import {
-  Account,
+  DaySchedule,
   PHASE_LABEL,
-  TradingDayMode,
-  accountTotalDays,
-  dailyBaseHit,
+  Schedule,
   fromISO,
   hitKey,
   money,
-  phaseAtIndex,
   resultOf,
-  tradingDates,
 } from "@/lib/calc";
 
 interface Props {
-  accounts: Account[];
+  schedule: Schedule;
   actuals?: Record<string, number>;
-  globalStart: string;
-  tradingDayMode: TradingDayMode;
   todayISO: string;
   onSetActual: (iso: string, accountId: string, value: number | null) => void;
 }
 
-export default function HitTracker({
-  accounts,
-  actuals,
-  globalStart,
-  tradingDayMode,
-  todayISO,
-  onSetActual,
-}: Props) {
+export default function HitTracker({ schedule, actuals, todayISO, onSetActual }: Props) {
   const rec = actuals || {};
+  const [showUpcoming, setShowUpcoming] = useState(false);
 
-  if (accounts.length === 0) {
-    return <p className="hint">No accounts yet.</p>;
-  }
+  const trackable = schedule.days.filter((d) => d.dailyTargetTotal > 0);
+  const past = trackable.filter((d) => d.iso <= todayISO).reverse(); // newest first
+  const upcoming = trackable.filter((d) => d.iso > todayISO);
+
+  const renderDay = (d: DaySchedule) => {
+    const dt = fromISO(d.iso);
+    const isToday = d.iso === todayISO;
+    let logged = 0;
+    let net = 0;
+    const rows = d.entries.map((e) => {
+      const actual = rec[hitKey(d.iso, e.accountId)];
+      const target = e.perAccountTarget;
+      const res = resultOf(actual, target);
+      if (actual !== undefined) {
+        logged++;
+        net += actual - target;
+      }
+      return { e, actual, target, res };
+    });
+    return (
+      <div className={`lg-day${isToday ? " today" : ""}`} key={d.iso}>
+        <div className="lg-day-head">
+          <span className="lg-date">
+            {dt.toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            })}
+            {isToday ? " · Today" : ""}
+          </span>
+          <span className="lg-day-sum">
+            {logged}/{rows.length} logged
+            {logged > 0 && (
+              <>
+                {" · "}
+                <span className={net >= 0 ? "up" : "down"}>
+                  {net >= 0 ? "+" : "−"}
+                  {money(Math.abs(net))}
+                </span>
+              </>
+            )}
+          </span>
+        </div>
+        <div className="lg-rows">
+          {rows.map(({ e, actual, target, res }) => {
+            const delta = actual === undefined ? 0 : actual - target;
+            return (
+              <div className={`lg-row ${res}`} key={e.accountId}>
+                <span className="lg-acct">
+                  {e.firm} <span className="muted">{e.size}</span>
+                  <span className={`lg-stage ${e.phase}`}>{PHASE_LABEL[e.phase]}</span>
+                </span>
+                <span className="lg-target">
+                  target <strong>{money(target)}</strong>
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="actual $"
+                  value={actual ?? ""}
+                  onChange={(ev) =>
+                    onSetActual(
+                      d.iso,
+                      e.accountId,
+                      ev.target.value === "" ? null : Number(ev.target.value),
+                    )
+                  }
+                />
+                <span
+                  className={`lg-delta ${
+                    actual === undefined ? "" : delta >= 0 ? "up" : "down"
+                  }`}
+                >
+                  {actual === undefined
+                    ? "—"
+                    : `${delta >= 0 ? "+" : "−"}${money(Math.abs(delta))}`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="hit-tracker">
-      {accounts.map((a) => {
-        const days = tradingDates(a.startDate || globalStart, accountTotalDays(a), tradingDayMode);
-        let logged = 0;
-        let acctDelta = 0;
-        const rows = days.map((iso, i) => {
-          const phase = phaseAtIndex(a, i);
-          // Per single account (copy-traded across the count).
-          const target = phase ? dailyBaseHit(a[phase], a.minDay) : 0;
-          const actual = rec[hitKey(iso, a.id)];
-          const result = resultOf(actual, target);
-          if (actual !== undefined) {
-            logged++;
-            acctDelta += actual - target;
-          }
-          return { iso, i, phase, target, actual, result };
-        });
-        return (
-          <div className="ht-row" key={a.id}>
-            <div className="ht-head">
-              <span className="ht-name">
-                {a.firm} <span className="muted">{a.size}</span>
-              </span>
-              <span className="ht-count">
-                {logged}/{days.length} logged ·{" "}
-                <span className={acctDelta >= 0 ? "up" : "down"}>
-                  {acctDelta >= 0 ? "+" : "−"}
-                  {money(Math.abs(acctDelta))}
-                </span>
-              </span>
-            </div>
-            <div className="ht-table-wrap">
-              <table className="ht-table">
-                <thead>
-                  <tr>
-                    <th>Day</th>
-                    <th className="text">Date</th>
-                    <th className="text">Stage</th>
-                    <th>Target</th>
-                    <th>Actual</th>
-                    <th>Δ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(({ iso, i, phase, target, actual, result }) => {
-                    const d = fromISO(iso);
-                    const cls = [];
-                    if (iso === todayISO) cls.push("today");
-                    else if (iso < todayISO && actual === undefined) cls.push("past");
-                    if (result === "hit") cls.push("hit");
-                    else if (result === "miss") cls.push("miss");
-                    const delta = actual === undefined ? 0 : actual - target;
-                    return (
-                      <tr key={iso} className={cls.join(" ")}>
-                        <td>D{i + 1}</td>
-                        <td className="text">
-                          {d.toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </td>
-                        <td className="text">{phase ? PHASE_LABEL[phase] : "—"}</td>
-                        <td>{money(target)}</td>
-                        <td>
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            placeholder="—"
-                            value={actual ?? ""}
-                            onChange={(e) =>
-                              onSetActual(
-                                iso,
-                                a.id,
-                                e.target.value === "" ? null : Number(e.target.value),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className={actual === undefined ? "" : delta >= 0 ? "up" : "down"}>
-                          {actual === undefined
-                            ? "—"
-                            : `${delta >= 0 ? "+" : "−"}${money(Math.abs(delta))}`}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      })}
+    <div className="log-past">
+      {past.length === 0 ? (
+        <p className="hint">No past trading days yet.</p>
+      ) : (
+        past.map(renderDay)
+      )}
+      {upcoming.length > 0 && (
+        <div className="lg-upcoming">
+          <button className="btn ghost" onClick={() => setShowUpcoming((v) => !v)}>
+            {showUpcoming ? "Hide" : "Show"} upcoming days ({upcoming.length})
+          </button>
+          {showUpcoming && upcoming.map(renderDay)}
+        </div>
+      )}
     </div>
   );
 }

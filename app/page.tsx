@@ -718,10 +718,8 @@ export default function Home() {
               hit that day&apos;s base target.
             </p>
             <HitTracker
-              accounts={state.accounts}
+              schedule={fullSchedule}
               actuals={state.actuals}
-              globalStart={state.startDate}
-              tradingDayMode={state.tradingDayMode}
               todayISO={today}
               onSetActual={setActual}
             />

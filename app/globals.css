@@ -588,67 +588,123 @@ tfoot td {
 .agenda-row.hit-miss {
   border-color: var(--danger);
 }
-/* Per-account base-hit tracker (grid of toggle boxes) */
-.hit-tracker {
+/* Day-centric "Log past days" view */
+.log-past {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
-.ht-row {
+.lg-day {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
   background: var(--bg-elev);
-  padding: 12px 14px;
+  overflow: hidden;
 }
-.ht-head {
+.lg-day.today {
+  border-color: var(--gold);
+}
+.lg-day-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  padding: 9px 13px;
+  background: var(--bg-elev-2);
+  border-bottom: 1px solid var(--border-soft);
 }
-.ht-name {
-  font-weight: 600;
-  font-size: 14px;
-}
-.ht-count {
+.lg-date {
+  font-weight: 700;
   font-size: 13px;
+}
+.lg-day-sum {
+  font-size: 12px;
   font-weight: 600;
-  color: var(--accent-text);
+  color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }
-.ht-boxes {
+.lg-rows {
+  display: flex;
+  flex-direction: column;
+}
+.lg-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--border-soft);
+  border-left: 3px solid transparent;
 }
-.ht-box {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-elev-2);
-  color: var(--text-faint);
-  font-size: 11px;
+.lg-row:last-child {
+  border-bottom: none;
+}
+.lg-row.hit {
+  border-left-color: var(--accent);
+}
+.lg-row.miss {
+  border-left-color: var(--danger);
+}
+.lg-row.pending {
+  border-left-color: var(--gold);
+}
+.lg-acct {
+  flex: 1 1 140px;
+  min-width: 0;
   font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.lg-stage {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-soft);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.lg-target {
+  font-size: 12px;
+  color: var(--text-faint);
   font-variant-numeric: tabular-nums;
-  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  white-space: nowrap;
 }
-.ht-box:hover {
+.lg-target strong {
+  color: var(--text-dim);
+}
+.lg-row input {
+  width: 100px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: right;
+}
+.lg-row input:focus {
+  outline: none;
   border-color: var(--accent);
 }
-.ht-box.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #06231a;
+.lg-delta {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 64px;
+  text-align: right;
 }
-.ht-box.past {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
-  color: var(--danger);
-}
-.ht-box.today {
-  box-shadow: 0 0 0 2px var(--gold);
+.lg-upcoming {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 /* Today-only cards on the home page */
 .today-hits {
@@ -780,55 +836,6 @@ tfoot td {
   color: var(--accent-text);
 }
 .down {
-  color: var(--danger);
-}
-/* History table */
-.ht-table-wrap {
-  overflow-x: auto;
-}
-.ht-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.ht-table th,
-.ht-table td {
-  padding: 6px 8px;
-  text-align: right;
-  border-bottom: 1px solid var(--border-soft);
-  white-space: nowrap;
-}
-.ht-table th.text,
-.ht-table td.text {
-  text-align: left;
-}
-.ht-table thead th {
-  color: var(--text-faint);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 600;
-}
-.ht-table input {
-  width: 88px;
-  text-align: right;
-  background: var(--bg-elev-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 6px;
-  padding: 5px 7px;
-  font-family: inherit;
-  font-size: 13px;
-}
-.ht-table input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-.ht-table tr.today td {
-  background: color-mix(in srgb, var(--gold) 12%, transparent);
-}
-.ht-table tr.past td:first-child {
   color: var(--danger);
 }
 .cell .daynum {
