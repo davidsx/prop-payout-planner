@@ -69,13 +69,15 @@ export default function TodayHits({
               </span>
               {active ? (
                 <>
-                  <span className="th-need">
-                    {money(perAcct)}
-                    <span className="th-sub">
-                      {" "}
-                      /day per acct{a.count > 1 ? ` · ×${a.count}` : ""}
+                  <div className="th-need-row">
+                    <span className="th-need">
+                      {money(perAcct)}
+                      <span className="th-sub"> /day{a.count > 1 ? ` · ×${a.count}` : ""}</span>
                     </span>
-                  </span>
+                    {phase && (
+                      <span className={`th-tag ${phase}`}>{PHASE_LABEL[phase]}</span>
+                    )}
+                  </div>
                   <div className="th-actual">
                     <input
                       type="number"
@@ -95,9 +97,6 @@ export default function TodayHits({
                         {delta >= 0 ? "+" : "−"}
                         {money(Math.abs(delta))}
                       </span>
-                    )}
-                    {phase && (
-                      <span className={`th-tag ${phase}`}>{PHASE_LABEL[phase]}</span>
                     )}
                   </div>
                 </>
