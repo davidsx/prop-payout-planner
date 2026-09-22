@@ -92,7 +92,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [accountsLocked, setAccountsLocked] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [liveMode, setLiveMode] = useState(false);
+  const [liveMode, setLiveMode] = useState(true);
   const [state, setState] = useState<PlannerState>({
     startDate: todayISO(),
     tradingDayMode: "weekdays",
