@@ -354,21 +354,21 @@ export default function Home() {
   const today = todayISO();
   // Daily base-hit progress across the full plan.
   const hitStats = useMemo(
-    () => hitSummary(fullSchedule, state.hits, today),
-    [fullSchedule, state.hits, today],
+    () => hitSummary(fullSchedule, state.actuals, today),
+    [fullSchedule, state.actuals, today],
   );
 
   const setAccounts = (accounts: Account[]) => setState((s) => ({ ...s, accounts }));
   const setStart = (startDate: string) => setState((s) => ({ ...s, startDate }));
   const setMode = (tradingDayMode: TradingDayMode) =>
     setState((s) => ({ ...s, tradingDayMode }));
-  const toggleHit = (iso: string, accountId: string) =>
+  const setActual = (iso: string, accountId: string, value: number | null) =>
     setState((s) => {
-      const hits = { ...(s.hits || {}) };
+      const actuals = { ...(s.actuals || {}) };
       const k = hitKey(iso, accountId);
-      if (hits[k] === "hit") delete hits[k];
-      else hits[k] = "hit";
-      return { ...s, hits };
+      if (value === null || Number.isNaN(value)) delete actuals[k];
+      else actuals[k] = value;
+      return { ...s, actuals };
     });
 
   const reset = () => {
@@ -637,11 +637,11 @@ export default function Home() {
         </p>
         <TodayHits
           accounts={state.accounts}
-          hits={state.hits}
+          actuals={state.actuals}
           globalStart={state.startDate}
           tradingDayMode={state.tradingDayMode}
           todayISO={today}
-          onToggle={toggleHit}
+          onSetActual={setActual}
         />
       </section>
 
@@ -669,13 +669,16 @@ export default function Home() {
             <strong>{hitStats.hit}</strong>/{hitStats.totalPast} targets hit
           </span>
           {hitStats.miss > 0 && (
-            <span className="hit-stat miss">✕ {hitStats.miss} missed</span>
+            <span className="hit-stat miss">✕ {hitStats.miss} under</span>
           )}
           {hitStats.pending > 0 && (
             <span className="hit-stat pending">○ {hitStats.pending} to log</span>
           )}
-          <span className="hit-stat streak">🔥 {hitStats.streak}-day clean streak</span>
-          <span className="hint">Open a day, then mark each account hit or missed.</span>
+          <span className={`hit-stat ${hitStats.delta >= 0 ? "streak" : "miss"}`}>
+            {hitStats.delta >= 0 ? "▲" : "▼"} {money(Math.abs(hitStats.delta))}{" "}
+            {hitStats.delta >= 0 ? "ahead" : "behind"}
+          </span>
+          <span className="hint">Enter each day&apos;s actual result per account.</span>
         </div>
         {focusedAccount && (
           <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
@@ -690,7 +693,7 @@ export default function Home() {
           startISO={focusedAccount?.startDate || state.startDate}
           tradingDayMode={state.tradingDayMode}
           todayISO={today}
-          hits={state.hits}
+          actuals={state.actuals}
         />
       </section>
 
@@ -716,11 +719,11 @@ export default function Home() {
             </p>
             <HitTracker
               accounts={state.accounts}
-              hits={state.hits}
+              actuals={state.actuals}
               globalStart={state.startDate}
               tradingDayMode={state.tradingDayMode}
               todayISO={today}
-              onToggle={toggleHit}
+              onSetActual={setActual}
             />
           </div>
         </div>

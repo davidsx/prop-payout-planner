@@ -3,13 +3,13 @@
 import { useMemo, useState } from "react";
 import {
   DaySchedule,
-  HitStatus,
   PHASE_LABEL,
   Schedule,
   fromISO,
   hitKey,
   isTradingDay,
   money,
+  resultOf,
   toISO,
   TradingDayMode,
 } from "@/lib/calc";
@@ -32,7 +32,7 @@ interface Props {
   startISO: string;
   tradingDayMode: TradingDayMode;
   todayISO: string;
-  hits?: Record<string, HitStatus>;
+  actuals?: Record<string, number>;
 }
 
 export default function Calendar({
@@ -40,7 +40,7 @@ export default function Calendar({
   startISO,
   tradingDayMode,
   todayISO,
-  hits,
+  actuals,
 }: Props) {
   const start = fromISO(startISO);
   const [view, setView] = useState(() => ({
@@ -103,9 +103,9 @@ export default function Calendar({
     let hit = 0;
     let miss = 0;
     for (const e of info.entries) {
-      const m = hits?.[hitKey(info.iso, e.accountId)];
-      if (m === "hit") hit++;
-      else if (m === "miss") miss++;
+      const r = resultOf(actuals?.[hitKey(info.iso, e.accountId)], e.dailyTarget);
+      if (r === "hit") hit++;
+      else if (r === "miss") miss++;
     }
     if (miss > 0) return "miss";
     if (info.entries.length > 0 && hit === info.entries.length) return "hit";

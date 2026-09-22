@@ -49,18 +49,29 @@ export interface PlannerState {
   /** Epoch ms of the last write (server-stamped). */
   updatedAt?: number;
   /**
-   * Actual daily result for each account's base target, keyed by
-   * `${iso}|${accountId}` (see hitKey): "hit" or "miss". A missing entry for a
-   * past day is "pending". Tracking only — it does not change the schedule.
+   * Actual take-home/profit recorded for each account on each day, keyed by
+   * `${iso}|${accountId}` (see hitKey). The difference vs that day's base
+   * target gives over/under; a missing entry is "pending". Tracking only — it
+   * does not change the projected schedule.
    */
-  hits?: Record<string, "hit" | "miss">;
+  actuals?: Record<string, number>;
 }
 
-export type HitStatus = "hit" | "miss";
+/** hit = actual met/exceeded target, miss = below, pending = not recorded. */
+export type DayResult = "hit" | "miss" | "pending";
 
 /** Storage key for one account's result on one day. */
 export function hitKey(iso: string, accountId: string): string {
   return `${iso}|${accountId}`;
+}
+
+/** Result for one account-day given the recorded actual and its base target. */
+export function resultOf(
+  actual: number | undefined,
+  target: number,
+): DayResult {
+  if (actual === undefined) return "pending";
+  return actual >= target ? "hit" : "miss";
 }
 
 /** Compact metadata for one saved version (used by the version manager). */
@@ -438,60 +449,68 @@ export function monthlySummary(schedule: Schedule): MonthSummary[] {
 // ---------------------------------------------------------------------------
 
 export interface HitSummary {
-  hit: number; // account-days marked hit
-  miss: number; // account-days marked missed
-  pending: number; // past account-days not yet marked
+  hit: number; // account-days at/above target
+  miss: number; // account-days below target
+  pending: number; // past account-days not recorded
   totalPast: number; // total trackable account-days up to today
-  streak: number; // most recent run of days where every account was hit
+  streak: number; // most recent run of days where every account hit
+  delta: number; // running (actual − target) summed over recorded account-days
 }
 
 /**
- * Roll up per-account hit/miss marks against the trackable trading days (days
- * carrying a daily target), counting in account-days. Only days up to
- * `todayISO` count; unmarked past account-days are "pending". Streak = the most
- * recent unbroken run of fully-hit days (every active account hit), skipping
- * still-unlogged days at the very end.
+ * Roll up recorded actuals against each account-day's base target (the entry's
+ * dailyTarget), counting in account-days. Only days up to `todayISO` count;
+ * unrecorded past account-days are "pending". `delta` is the net over/under
+ * across all recorded account-days. Streak = the most recent unbroken run of
+ * fully-hit days, skipping still-unrecorded days at the very end.
  */
 export function hitSummary(
   schedule: Schedule,
-  hits: Record<string, HitStatus> | undefined,
+  actuals: Record<string, number> | undefined,
   todayISO: string,
 ): HitSummary {
-  const marks = hits || {};
+  const rec = actuals || {};
   const past = schedule.days.filter((d) => d.dailyTargetTotal > 0 && d.iso <= todayISO);
   let hit = 0;
   let miss = 0;
   let pending = 0;
-  // Per-day rollup: "hit" (all hit), "miss" (any miss), "none" (all unmarked),
-  // "partial" (some marked, no miss) — used for the streak.
+  let delta = 0;
+  // Per-day rollup: "hit" (all hit), "miss" (any miss), "none" (none recorded),
+  // "partial" (some recorded, no miss) — used for the streak.
   const dayStatus: ("hit" | "miss" | "none" | "partial")[] = [];
   for (const d of past) {
     let dh = 0;
     let dm = 0;
+    let dRec = 0;
     for (const e of d.entries) {
-      const m = marks[hitKey(d.iso, e.accountId)];
-      if (m === "hit") {
+      const actual = rec[hitKey(d.iso, e.accountId)];
+      const r = resultOf(actual, e.dailyTarget);
+      if (r === "pending") {
+        pending++;
+        continue;
+      }
+      dRec++;
+      delta += (actual as number) - e.dailyTarget;
+      if (r === "hit") {
         hit++;
         dh++;
-      } else if (m === "miss") {
+      } else {
         miss++;
         dm++;
-      } else {
-        pending++;
       }
     }
     const n = d.entries.length;
-    dayStatus.push(dm > 0 ? "miss" : dh === n ? "hit" : dh === 0 ? "none" : "partial");
+    dayStatus.push(dm > 0 ? "miss" : dRec === 0 ? "none" : dh === n ? "hit" : "partial");
   }
   let i = dayStatus.length - 1;
-  while (i >= 0 && dayStatus[i] === "none") i--; // skip unlogged recent days
+  while (i >= 0 && dayStatus[i] === "none") i--; // skip unrecorded recent days
   let streak = 0;
   while (i >= 0 && dayStatus[i] === "hit") {
     streak++;
     i--;
   }
   const totalPast = past.reduce((s, d) => s + d.entries.length, 0);
-  return { hit, miss, pending, totalPast, streak };
+  return { hit, miss, pending, totalPast, streak, delta };
 }
 
 // ---------------------------------------------------------------------------

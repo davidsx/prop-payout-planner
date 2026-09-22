@@ -729,6 +729,91 @@ tfoot td {
 .modal.modal-wide {
   max-width: 900px;
 }
+/* Actual-vs-target entry */
+.th-card.under {
+  background: color-mix(in srgb, var(--danger) 9%, var(--bg-elev));
+  border-color: var(--danger);
+}
+.th-actual {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+.th-actual input {
+  width: 108px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.th-actual input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.th-delta {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.up {
+  color: var(--accent-text);
+}
+.down {
+  color: var(--danger);
+}
+/* History table */
+.ht-table-wrap {
+  overflow-x: auto;
+}
+.ht-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.ht-table th,
+.ht-table td {
+  padding: 6px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+.ht-table th.text,
+.ht-table td.text {
+  text-align: left;
+}
+.ht-table thead th {
+  color: var(--text-faint);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.ht-table input {
+  width: 88px;
+  text-align: right;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-family: inherit;
+  font-size: 13px;
+}
+.ht-table input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.ht-table tr.today td {
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+.ht-table tr.past td:first-child {
+  color: var(--danger);
+}
 .cell .daynum {
   font-size: 12px;
   color: var(--text-dim);

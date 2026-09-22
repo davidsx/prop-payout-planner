@@ -2,7 +2,6 @@
 
 import {
   Account,
-  HitStatus,
   PHASE_LABEL,
   TradingDayMode,
   accountTotalDays,
@@ -10,27 +9,28 @@ import {
   hitKey,
   money,
   phaseAtIndex,
+  resultOf,
   tradingDates,
 } from "@/lib/calc";
 
 interface Props {
   accounts: Account[];
-  hits?: Record<string, HitStatus>;
+  actuals?: Record<string, number>;
   globalStart: string;
   tradingDayMode: TradingDayMode;
   todayISO: string;
-  onToggle: (iso: string, accountId: string) => void;
+  onSetActual: (iso: string, accountId: string, value: number | null) => void;
 }
 
 export default function TodayHits({
   accounts,
-  hits,
+  actuals,
   globalStart,
   tradingDayMode,
   todayISO,
-  onToggle,
+  onSetActual,
 }: Props) {
-  const marks = hits || {};
+  const rec = actuals || {};
 
   if (accounts.length === 0) {
     return <p className="hint">No accounts yet.</p>;
@@ -39,11 +39,13 @@ export default function TodayHits({
   const cards = accounts.map((a) => {
     const days = tradingDates(a.startDate || globalStart, accountTotalDays(a), tradingDayMode);
     const idx = days.indexOf(todayISO);
-    const active = idx >= 0; // today is a trading day within this account's plan
-    const on = active && marks[hitKey(todayISO, a.id)] === "hit";
+    const active = idx >= 0;
     const phase = active ? phaseAtIndex(a, idx) : null;
     const perAcct = phase ? dailyBaseHit(a[phase], a.minDay) : 0;
-    return { a, active, idx, on, phase, perAcct };
+    const target = perAcct * a.count;
+    const actual = active ? rec[hitKey(todayISO, a.id)] : undefined;
+    const result = resultOf(actual, target);
+    return { a, active, idx, phase, perAcct, target, actual, result };
   });
 
   const anyActive = cards.some((c) => c.active);
@@ -51,34 +53,55 @@ export default function TodayHits({
   return (
     <>
       <div className="today-hits">
-        {cards.map(({ a, active, idx, on, phase, perAcct }) => (
-          <button
-            key={a.id}
-            className={`th-card${on ? " on" : ""}${active ? "" : " idle"}`}
-            disabled={!active}
-            aria-pressed={on}
-            onClick={() => active && onToggle(todayISO, a.id)}
-          >
-            <span className="th-top">
-              <span className="th-name">
-                {a.firm} <span className="muted">{a.size}</span>
-              </span>
-              {active && <span className="th-day">D{idx + 1}</span>}
-            </span>
-            {active ? (
-              <>
-                <span className="th-need">
-                  {a.count > 1 ? `${a.count} × ${money(perAcct)}` : money(perAcct)}
-                  <span className="th-sub"> /day</span>
+        {cards.map(({ a, active, idx, phase, perAcct, target, actual, result }) => {
+          const delta = actual === undefined ? 0 : actual - target;
+          const cls = ["th-card"];
+          if (result === "hit") cls.push("on");
+          else if (result === "miss") cls.push("under");
+          if (!active) cls.push("idle");
+          return (
+            <div className={cls.join(" ")} key={a.id}>
+              <span className="th-top">
+                <span className="th-name">
+                  {a.firm} <span className="muted">{a.size}</span>
                 </span>
-                <span className="th-stage">{phase ? PHASE_LABEL[phase] : ""}</span>
-                <span className="th-status">{on ? "✅ Hit" : "Tap to mark hit"}</span>
-              </>
-            ) : (
-              <span className="th-status idle">No session today</span>
-            )}
-          </button>
-        ))}
+                {active && <span className="th-day">D{idx + 1}</span>}
+              </span>
+              {active ? (
+                <>
+                  <span className="th-need">
+                    {a.count > 1 ? `${a.count} × ${money(perAcct)}` : money(perAcct)}
+                    <span className="th-sub"> /day target</span>
+                  </span>
+                  <span className="th-stage">{phase ? PHASE_LABEL[phase] : ""}</span>
+                  <div className="th-actual">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="actual $"
+                      value={actual ?? ""}
+                      onChange={(e) =>
+                        onSetActual(
+                          todayISO,
+                          a.id,
+                          e.target.value === "" ? null : Number(e.target.value),
+                        )
+                      }
+                    />
+                    {actual !== undefined && (
+                      <span className={`th-delta ${delta >= 0 ? "up" : "down"}`}>
+                        {delta >= 0 ? "+" : "−"}
+                        {money(Math.abs(delta))}
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <span className="th-status idle">No session today</span>
+              )}
+            </div>
+          );
+        })}
       </div>
       {!anyActive && (
         <p className="hint" style={{ marginTop: 10 }}>
