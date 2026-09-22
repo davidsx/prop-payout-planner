@@ -758,6 +758,22 @@ tfoot td {
   .controls .field select {
     width: 100%;
   }
+  /* iOS Safari's native <input type="date"> has an intrinsic min-content width
+     and internal value margins that ignore width:100% and spill off-screen in
+     the full-width mobile layout. Strip the native chrome so it fits its box. */
+  .controls .field input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .controls .field input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+    margin: 0;
+  }
+  .controls .field input[type="date"]::-webkit-datetime-edit {
+    padding: 0;
+  }
   /* Swap the month grid for the vertical agenda. */
   .cal-grid {
     display: none;
