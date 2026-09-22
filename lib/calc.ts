@@ -291,19 +291,21 @@ function payoutIndicesFor(
   const rDays = phaseDays(a.remaining); // trading days per Remaining cycle
   const fEnd = eEnd + fDays;
 
-  // First payout: last day of the 1st-target phase (fall back to eval end).
-  const firstIdx = Math.max(0, (fDays > 0 ? fEnd : eEnd) - 1);
-  events.push({ index: firstIdx, amount: each, milestone: "first" });
+  // The payout lands the trading day AFTER the target is hit — that same day is
+  // also the first day of the next phase's work.
+  const doneIdx = Math.max(0, (fDays > 0 ? fEnd : eEnd) - 1); // last day of 1st target
+  const payIdx = doneIdx + 1;
+  events.push({ index: payIdx, amount: each, milestone: "first" });
 
   const rest = cyclesOf(a) - 1;
   if (rest > 0 && rDays > 0) {
-    // One payout at the end of each cycle: firstIdx + k × remaining.days.
+    // One payout the day after each cycle completes: payIdx + k × remaining.days.
     for (let k = 1; k <= rest; k++) {
-      events.push({ index: firstIdx + k * rDays, amount: each, milestone: "remaining" });
+      events.push({ index: payIdx + k * rDays, amount: each, milestone: "remaining" });
     }
   } else if (rest > 0) {
     // No remaining cadence — pile the rest onto the first payout day.
-    events.push({ index: firstIdx, amount: rest * each, milestone: "remaining" });
+    events.push({ index: payIdx, amount: rest * each, milestone: "remaining" });
   }
   return events;
 }
@@ -343,7 +345,8 @@ export function buildSchedule(state: PlannerState, focusId?: string | null): Sch
     const total = accountTotalDays(a);
     horizon = Math.max(horizon, total);
     const startISO = a.startDate || state.startDate;
-    const isoList = tradingDates(startISO, Math.max(total, 1), state.tradingDayMode);
+    // +1 day so the final payout (which lands the day after the last target) fits.
+    const isoList = tradingDates(startISO, Math.max(total + 1, 1), state.tradingDayMode);
 
     for (let i = 0; i < total; i++) {
       const phase = phaseAtIndex(a, i);
@@ -448,13 +451,26 @@ export function buildLiveSchedule(
     let si = 0;
     let acc = 0;
     let used = 0;
-    for (let p = 0; p < isoList.length && si < steps.length; p++) {
-      if (steps[si].pace <= 0) break;
+    const pending: ("first" | "remaining")[] = []; // payouts due the next trading day
+    for (let p = 0; p < isoList.length && (si < steps.length || pending.length > 0); p++) {
       const iso = isoList[p];
+      const day = ensureDay(iso);
+      used = p + 1;
+
+      // A target hit on the previous day pays out today.
+      while (pending.length > 0) {
+        const milestone = pending.shift() as "first" | "remaining";
+        day.payouts.push({ accountId: a.id, firm: a.firm, size: a.size, milestone, amount: each });
+        day.payoutTotal += each;
+        grandTakeHome += each;
+      }
+
+      if (si >= steps.length) continue; // only flushing final payouts now
+      if (steps[si].pace <= 0) break;
+
       const step = steps[si];
       const perAccount = step.pace;
       const combined = perAccount * a.count;
-      const day = ensureDay(iso);
       day.entries.push({
         accountId: a.id,
         firm: a.firm,
@@ -465,22 +481,11 @@ export function buildLiveSchedule(
         dailyTarget: combined,
       });
       day.dailyTargetTotal += combined;
-      used = p + 1;
 
       acc += rec[hitKey(iso, a.id)] ?? perAccount;
       while (si < steps.length && steps[si].pace > 0 && acc >= steps[si].target) {
         acc -= steps[si].target;
-        if (steps[si].payout) {
-          day.payouts.push({
-            accountId: a.id,
-            firm: a.firm,
-            size: a.size,
-            milestone: steps[si].key === "first" ? "first" : "remaining",
-            amount: each,
-          });
-          day.payoutTotal += each;
-          grandTakeHome += each;
-        }
+        if (steps[si].payout) pending.push(steps[si].key === "first" ? "first" : "remaining");
         si += 1;
       }
     }
@@ -665,23 +670,28 @@ function walkAccount(
   let snapStep = 0;
   let snapAcc = 0;
   let started = false;
+  let pending = 0; // payouts due the next trading day
   const payouts: string[] = [];
   let finish: string | null = null;
 
-  for (let p = 0; p < isoList.length && si < steps.length; p++) {
-    if (steps[si].pace <= 0) break; // can't make progress; leave unfinished
+  for (let p = 0; p < isoList.length && (si < steps.length || pending > 0); p++) {
     const iso = isoList[p];
-    const pace = steps[si].pace;
-    const amt = actuals?.[hitKey(iso, a.id)] ?? pace;
-    if (iso <= todayISO) delta += amt - pace;
-    acc += amt;
-    while (si < steps.length && steps[si].pace > 0 && acc >= steps[si].target) {
-      acc -= steps[si].target;
-      if (steps[si].payout) payouts.push(iso);
-      si += 1;
-      if (si >= steps.length) {
-        finish = iso;
-        break;
+    // A target hit on the previous day pays out today.
+    while (pending > 0) {
+      payouts.push(iso);
+      pending -= 1;
+      finish = iso;
+    }
+    if (si < steps.length) {
+      if (steps[si].pace <= 0) break; // can't make progress; leave unfinished
+      const pace = steps[si].pace;
+      const amt = actuals?.[hitKey(iso, a.id)] ?? pace;
+      if (iso <= todayISO) delta += amt - pace;
+      acc += amt;
+      while (si < steps.length && steps[si].pace > 0 && acc >= steps[si].target) {
+        acc -= steps[si].target;
+        if (steps[si].payout) pending += 1;
+        si += 1;
       }
     }
     if (iso <= todayISO) {
