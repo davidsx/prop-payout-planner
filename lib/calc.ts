@@ -17,8 +17,14 @@ export interface Account {
   size: string; // free text, e.g. "25k"
   /** Optional per-account start date (ISO). Falls back to the global start. */
   startDate?: string;
-  /** Number of payouts expected from this account config. */
+  /** Number of parallel accounts running this identical config. */
   count: number;
+  /**
+   * Total payout cycles over the plan = the 1st-target payout plus each
+   * Remaining re-hit. Independent of `count`. Defaults to `count` when unset
+   * (legacy data). The Remaining phase spans (cycles - 1) × remaining.days.
+   */
+  cycles?: number;
   /** Gross payout amount per payout. */
   payout: number;
   /** Take-home rate applied to gross payout (e.g. 0.9 = 90%). */
@@ -71,6 +77,12 @@ export function dailyBaseHit(phase: Phase, minDay: number): number {
   return Math.max(Math.round(phase.target / phase.days), minDay);
 }
 
+/** Total payout cycles for an account (1st target + Remaining re-hits). */
+export function cyclesOf(a: Account): number {
+  const c = a.cycles;
+  return c && c > 0 ? Math.floor(c) : Math.max(1, a.count);
+}
+
 /**
  * Take-home on a single payout day: the `count` parallel accounts all pay
  * `payout * rate`, so one payout day is worth count * payout * rate.
@@ -80,22 +92,21 @@ export function payoutTakeHome(a: Account): number {
 }
 
 /**
- * Total take-home for an account. `count` parallel accounts each pay out
- * `count` times over the plan (first target + re-hits of Remaining), and every
- * payout is `payout * rate`, so the total is count² * payout * rate.
+ * Total take-home for an account = every payout cycle's take-home summed:
+ * cycles × (count × payout × rate).
  */
 export function accountTakeHome(a: Account): number {
-  return a.count * a.count * a.payout * a.rate;
+  return cyclesOf(a) * a.count * a.payout * a.rate;
 }
 
 /**
  * Trading days the Remaining phase occupies. `remaining.days` is the cadence
- * for ONE payout cycle, and there are `count - 1` cycles after the first
- * payout, so the phase spans (count - 1) × remaining.days days.
+ * for ONE payout cycle, and there are `cycles - 1` cycles after the first
+ * payout, so the phase spans (cycles - 1) × remaining.days days.
  */
 export function remainingSpanDays(a: Account): number {
-  const cycles = Math.max(0, a.count - 1);
-  return phaseDays(a.remaining) * cycles;
+  const extra = Math.max(0, cyclesOf(a) - 1);
+  return phaseDays(a.remaining) * extra;
 }
 
 /** Total budgeted trading days for an account across all three phases. */
@@ -234,15 +245,15 @@ function phaseAtIndex(a: Account, i: number): PhaseKey | null {
 }
 
 /**
- * Payout events for an account. There are `count` payout DAYS: one when the 1st
- * target is first reached (end of the 1st-target phase), then one at the end of
- * each subsequent Remaining cycle. `remaining.days` is the length of ONE cycle,
- * so the remaining `count - 1` payouts land every `remaining.days` trading days
- * after the first. Eval never pays out.
+ * Payout events for an account. There are `cycles` payout DAYS: one when the
+ * 1st target is first reached (end of the 1st-target phase), then one at the end
+ * of each subsequent Remaining cycle. `remaining.days` is the length of ONE
+ * cycle, so the remaining `cycles - 1` payouts land every `remaining.days`
+ * trading days after the first. Eval never pays out.
  *
  * Because `count` parallel accounts all hit each milestone together, every
  * payout day is worth `count * payout * rate`. Amounts therefore sum to
- * `count² * payout * rate`.
+ * `cycles * count * payout * rate`.
  */
 function payoutIndicesFor(
   a: Account,
@@ -260,7 +271,7 @@ function payoutIndicesFor(
   const firstIdx = Math.max(0, (fDays > 0 ? fEnd : eEnd) - 1);
   events.push({ index: firstIdx, amount: each, milestone: "first" });
 
-  const rest = a.count - 1;
+  const rest = cyclesOf(a) - 1;
   if (rest > 0 && rDays > 0) {
     // One payout at the end of each cycle: firstIdx + k × remaining.days.
     for (let k = 1; k <= rest; k++) {

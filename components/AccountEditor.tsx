@@ -4,6 +4,7 @@ import {
   Account,
   accountTakeHome,
   accountTotalDays,
+  cyclesOf,
   dailyBaseHit,
   money,
   newId,
@@ -52,7 +53,7 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
       <table className="editor">
         <thead>
           <tr className="groups">
-            <th className="text" colSpan={9}></th>
+            <th className="text" colSpan={10}></th>
             <th className="grp-eval" colSpan={3}>
               Eval target
             </th>
@@ -68,13 +69,12 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
             <th className="text">Prop firm</th>
             <th>Size</th>
             <th>Start</th>
-            <th>Count</th>
+            <th title="Parallel accounts running this identical config">Count</th>
+            <th title="Total payout cycles: 1st target + Remaining re-hits">Cycle</th>
             <th>Payout</th>
             <th>Rate</th>
-            <th title="Single payout × account count (count × payout × rate)">Take-home</th>
-            <th title="Take-home × all payout cycles (count² × payout × rate)">
-              Total take-home
-            </th>
+            <th title="One payout day = count × payout × rate">Take-home</th>
+            <th title="All cycles = cycle × count × payout × rate">Total take-home</th>
             <th>Min day</th>
             <th className="grp-eval">Target</th>
             <th className="grp-eval">Days</th>
@@ -122,6 +122,14 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
                   value={a.count}
                   onChange={(e) =>
                     update(a.id, (x) => ((x.count = num(e.target.value)), x))
+                  }
+                />
+              </td>
+              <td>
+                <input
+                  value={cyclesOf(a)}
+                  onChange={(e) =>
+                    update(a.id, (x) => ((x.cycles = num(e.target.value)), x))
                   }
                 />
               </td>
@@ -235,7 +243,7 @@ export default function AccountEditor({ accounts, onChange, globalStart }: Props
         <tfoot>
           <tr>
             <td className="text">Total</td>
-            <td colSpan={5}></td>
+            <td colSpan={6}></td>
             <td className="derived">{money(grandPerPayout)}</td>
             <td className="derived">{money(grandTotal)}</td>
             <td colSpan={12}></td>
