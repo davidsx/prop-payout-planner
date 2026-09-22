@@ -687,7 +687,10 @@ function walkAccount(
       if (steps[si].pace <= 0) break; // can't make progress; leave unfinished
       const pace = steps[si].pace;
       const amt = actuals?.[hitKey(iso, a.id)] ?? pace;
-      if (iso <= todayISO) delta += amt - pace;
+      if (iso <= todayISO) {
+        delta += amt - pace;
+        started = true;
+      }
       acc += amt;
       while (si < steps.length && steps[si].pace > 0 && acc >= steps[si].target) {
         acc -= steps[si].target;
@@ -695,10 +698,12 @@ function walkAccount(
         si += 1;
       }
     }
-    if (iso <= todayISO) {
+    // Snapshot the phase/progress as of ENTERING today — the in-progress day
+    // doesn't advance the phase; its logged amount is shown against the current
+    // phase by the caller.
+    if (iso < todayISO) {
       snapStep = si;
       snapAcc = acc;
-      started = true;
     }
   }
   return { payouts, finish, snapStep, snapAcc, started, delta };
@@ -749,9 +754,12 @@ export function liveProjection(
     const done = live.snapStep >= steps.length;
     const cur = done ? null : steps[live.snapStep];
     const phaseTarget = cur ? cur.target : 0;
-    const earnedInPhase = done ? 0 : live.snapAcc;
-    const remaining = cur ? Math.max(0, cur.target - live.snapAcc) : 0;
-    const pct = cur && cur.target > 0 ? Math.min(1, live.snapAcc / cur.target) : done ? 1 : 0;
+    // Fold today's logged amount into the current phase's progress (the phase
+    // doesn't advance off the in-progress day — see walkAccount).
+    const todayActual = actuals?.[hitKey(todayISO, a.id)];
+    const earnedInPhase = done ? 0 : live.snapAcc + (todayActual ?? 0);
+    const remaining = cur ? Math.max(0, cur.target - earnedInPhase) : 0;
+    const pct = cur && cur.target > 0 ? Math.min(1, earnedInPhase / cur.target) : done ? 1 : 0;
     const payoutNo = Math.min(totalPayouts, steps.slice(0, live.snapStep + 1).filter((s) => s.payout).length || 1);
 
     const nextPayoutLiveISO = live.payouts.find((d) => d > todayISO) ?? null;
