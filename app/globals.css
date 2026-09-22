@@ -768,6 +768,7 @@ tfoot td {
   font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .up {
   color: var(--accent-text);
