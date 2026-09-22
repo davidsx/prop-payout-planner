@@ -14,6 +14,7 @@ import {
   VersionMeta,
   accountTakeHome,
   accountTotalDays,
+  buildLiveSchedule,
   buildSchedule,
   fromISO,
   hitKey,
@@ -341,14 +342,21 @@ export default function Home() {
     }
   };
 
-  // Full plan (all accounts) drives the top stat cards.
-  const fullSchedule = useMemo(() => buildSchedule(state), [state]);
+  // Full plan (all accounts) drives the top stat cards. In Live mode it is
+  // re-paced from the recorded actuals.
+  const fullSchedule = useMemo(
+    () => (liveMode ? buildLiveSchedule(state, state.actuals) : buildSchedule(state)),
+    [liveMode, state],
+  );
   // Calendar + monthly view honor the focused account (if any).
   const activeFocus =
     focusId && state.accounts.some((a) => a.id === focusId) ? focusId : null;
   const schedule = useMemo(
-    () => buildSchedule(state, activeFocus),
-    [state, activeFocus],
+    () =>
+      liveMode
+        ? buildLiveSchedule(state, state.actuals, activeFocus)
+        : buildSchedule(state, activeFocus),
+    [liveMode, state, activeFocus],
   );
   const months = useMemo(() => monthlySummary(schedule), [schedule]);
   const focusedAccount = activeFocus
@@ -674,7 +682,7 @@ export default function Home() {
 
       <section className="section">
         <div className="section-head">
-          <h2>Calendar</h2>
+          <h2>Calendar{liveMode ? " · Live" : ""}</h2>
           <div className="field" style={{ minWidth: 220 }}>
             <label htmlFor="focus">Focus</label>
             <select

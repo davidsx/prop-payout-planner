@@ -403,6 +403,107 @@ export function buildSchedule(state: PlannerState, focusId?: string | null): Sch
   };
 }
 
+/**
+ * Like buildSchedule, but paced by the recorded actuals instead of fixed day
+ * counts. Each account advances day by day using the logged amount (or the plan
+ * daily pace for unlogged days); a phase/cycle completes — and its payout lands
+ * — on the day cumulative profit reaches its target. With no actuals this
+ * reproduces the plan; over/under-performance shifts phases and payout dates.
+ */
+export function buildLiveSchedule(
+  state: PlannerState,
+  actuals: Record<string, number> | undefined,
+  focusId?: string | null,
+): Schedule {
+  const accounts = focusId
+    ? state.accounts.filter((a) => a.id === focusId)
+    : state.accounts;
+  const rec = actuals || {};
+
+  const byIso = new Map<string, DaySchedule>();
+  const ensureDay = (iso: string): DaySchedule => {
+    let d = byIso.get(iso);
+    if (!d) {
+      d = { iso, tradingDayIndex: 0, entries: [], dailyTargetTotal: 0, payouts: [], payoutTotal: 0 };
+      byIso.set(iso, d);
+    }
+    return d;
+  };
+
+  let grandTakeHome = 0;
+  let horizon = 0;
+  let earliestStart = state.startDate;
+  for (const a of accounts) {
+    const s = a.startDate || state.startDate;
+    if (s < earliestStart) earliestStart = s;
+  }
+
+  for (const a of accounts) {
+    const steps = liveSteps(a);
+    const each = a.payout * a.rate * a.count;
+    const startISO = a.startDate || state.startDate;
+    const maxDays = Math.max(1, accountTotalDays(a) + 200);
+    const isoList = tradingDates(startISO, maxDays, state.tradingDayMode);
+
+    let si = 0;
+    let acc = 0;
+    let used = 0;
+    for (let p = 0; p < isoList.length && si < steps.length; p++) {
+      if (steps[si].pace <= 0) break;
+      const iso = isoList[p];
+      const step = steps[si];
+      const perAccount = step.pace;
+      const combined = perAccount * a.count;
+      const day = ensureDay(iso);
+      day.entries.push({
+        accountId: a.id,
+        firm: a.firm,
+        size: a.size,
+        phase: step.key,
+        count: a.count,
+        perAccountTarget: perAccount,
+        dailyTarget: combined,
+      });
+      day.dailyTargetTotal += combined;
+      used = p + 1;
+
+      acc += rec[hitKey(iso, a.id)] ?? perAccount;
+      while (si < steps.length && steps[si].pace > 0 && acc >= steps[si].target) {
+        acc -= steps[si].target;
+        if (steps[si].payout) {
+          day.payouts.push({
+            accountId: a.id,
+            firm: a.firm,
+            size: a.size,
+            milestone: steps[si].key === "first" ? "first" : "remaining",
+            amount: each,
+          });
+          day.payoutTotal += each;
+          grandTakeHome += each;
+        }
+        si += 1;
+      }
+    }
+    horizon = Math.max(horizon, used);
+  }
+
+  const days = [...byIso.values()].sort((a, b) => (a.iso < b.iso ? -1 : 1));
+  for (const d of days) {
+    d.tradingDayIndex = Math.max(
+      0,
+      tradingOrdinal(earliestStart, d.iso, state.tradingDayMode) - 1,
+    );
+  }
+
+  return {
+    days,
+    byIso,
+    totalTradingDays: horizon,
+    grandTakeHome,
+    lastDayIso: days.length ? days[days.length - 1].iso : null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Monthly rollup
 // ---------------------------------------------------------------------------
