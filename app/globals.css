@@ -535,6 +535,83 @@ tfoot td {
 .cell.has-payout {
   border-color: var(--gold);
 }
+/* ---- Daily base-hit tracking ---- */
+.cell.hit-hit {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-elev));
+}
+.cell.hit-miss {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 9%, var(--bg-elev));
+}
+.dn-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.hit-glyph {
+  font-size: 11px;
+  line-height: 1;
+}
+.hit-glyph.pending {
+  color: var(--text-faint);
+}
+.hit-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: -2px 0 14px;
+}
+.hit-stat {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.hit-stat strong {
+  color: var(--accent-text);
+  font-size: 15px;
+}
+.hit-stat.miss {
+  color: var(--danger);
+}
+.hit-stat.streak {
+  color: var(--gold);
+}
+.hit-progress .hint {
+  flex: 1;
+  min-width: 160px;
+}
+.hit-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.hit-controls .tlabel {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+.btn.hit.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.btn.miss.on {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.agenda-row.hit-hit {
+  border-color: var(--accent);
+}
+.agenda-row.hit-miss {
+  border-color: var(--danger);
+}
 .cell .daynum {
   font-size: 12px;
   color: var(--text-dim);

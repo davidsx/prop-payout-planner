@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   DaySchedule,
+  HitStatus,
   PHASE_LABEL,
   Schedule,
   fromISO,
@@ -30,9 +31,18 @@ interface Props {
   startISO: string;
   tradingDayMode: TradingDayMode;
   todayISO: string;
+  hits?: Record<string, HitStatus>;
+  onSetHit?: (iso: string, status: HitStatus | null) => void;
 }
 
-export default function Calendar({ schedule, startISO, tradingDayMode, todayISO }: Props) {
+export default function Calendar({
+  schedule,
+  startISO,
+  tradingDayMode,
+  todayISO,
+  hits,
+  onSetHit,
+}: Props) {
   const start = fromISO(startISO);
   const [view, setView] = useState(() => ({
     year: start.getFullYear(),
@@ -85,6 +95,17 @@ export default function Calendar({ schedule, startISO, tradingDayMode, todayISO 
 
   const payoutLabel = (d: DaySchedule) => money(d.payoutTotal);
 
+  // "hit"/"miss" when marked; "pending" for a past trackable day not yet marked;
+  // null for future days or days without a daily target.
+  type DayStatus = "hit" | "miss" | "pending";
+  const GLYPH: Record<DayStatus, string> = { hit: "✅", miss: "❌", pending: "○" };
+  const statusOf = (info: DaySchedule | undefined): DayStatus | null => {
+    if (!info || info.dailyTargetTotal <= 0) return null;
+    const m = hits?.[info.iso];
+    if (m) return m;
+    return info.iso <= todayISO ? "pending" : null;
+  };
+
   return (
     <div>
       <div className="section-head">
@@ -123,10 +144,12 @@ export default function Calendar({ schedule, startISO, tradingDayMode, todayISO 
           const iso = toISO(date);
           const info = schedule.byIso.get(iso);
           const trading = isTradingDay(date, tradingDayMode);
+          const status = statusOf(info);
           const classes = ["cell"];
           if (!trading) classes.push("off");
           if (iso === todayISO) classes.push("today");
           if (info && info.payoutTotal > 0) classes.push("has-payout");
+          if (status) classes.push(`hit-${status}`);
 
           return (
             <div
@@ -136,7 +159,12 @@ export default function Calendar({ schedule, startISO, tradingDayMode, todayISO 
               style={{ cursor: info ? "pointer" : "default" }}
             >
               <div className="daynum">
-                <span>{date.getDate()}</span>
+                <span className="dn-left">
+                  {date.getDate()}
+                  {status && (
+                    <span className={`hit-glyph ${status}`}>{GLYPH[status]}</span>
+                  )}
+                </span>
                 {info && <span className="idx">D{info.tradingDayIndex + 1}</span>}
               </div>
 
@@ -183,9 +211,11 @@ export default function Calendar({ schedule, startISO, tradingDayMode, todayISO 
         ) : (
           monthDays.map((info) => {
             const d = fromISO(info.iso);
+            const status = statusOf(info);
             const classes = ["agenda-row"];
             if (info.iso === todayISO) classes.push("today");
             if (info.payoutTotal > 0) classes.push("has-payout");
+            if (status) classes.push(`hit-${status}`);
             return (
               <button
                 key={info.iso}
@@ -199,6 +229,7 @@ export default function Calendar({ schedule, startISO, tradingDayMode, todayISO 
                   <span className="dnum">{d.getDate()}</span>
                   <span className="idx">D{info.tradingDayIndex + 1}</span>
                 </span>
+                {status && <span className={`hit-glyph ${status}`}>{GLYPH[status]}</span>}
                 <span className="agenda-body">
                   <span className="agenda-dots">
                     {info.entries.map((e, k) => (
@@ -246,6 +277,30 @@ export default function Calendar({ schedule, startISO, tradingDayMode, todayISO 
             })}{" "}
             · Trading day {selectedDay.tradingDayIndex + 1}
           </h3>
+          {onSetHit &&
+            selectedDay.dailyTargetTotal > 0 &&
+            selectedDay.iso <= todayISO && (
+              <div className="hit-controls">
+                <span className="tlabel">Base target</span>
+                <button
+                  className={`btn hit${hits?.[selectedDay.iso] === "hit" ? " on" : ""}`}
+                  onClick={() => onSetHit(selectedDay.iso, "hit")}
+                >
+                  ✅ Hit
+                </button>
+                <button
+                  className={`btn miss${hits?.[selectedDay.iso] === "miss" ? " on" : ""}`}
+                  onClick={() => onSetHit(selectedDay.iso, "miss")}
+                >
+                  ❌ Missed
+                </button>
+                {hits?.[selectedDay.iso] && (
+                  <button className="btn ghost" onClick={() => onSetHit(selectedDay.iso, null)}>
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
           <table>
             <thead>
               <tr>

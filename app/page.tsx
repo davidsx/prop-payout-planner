@@ -13,6 +13,7 @@ import {
   accountTotalDays,
   buildSchedule,
   fromISO,
+  hitSummary,
   money,
   monthlySummary,
   seedAccounts,
@@ -347,11 +348,23 @@ export default function Home() {
     ? state.accounts.find((a) => a.id === activeFocus) || null
     : null;
   const today = todayISO();
+  // Daily base-hit progress across the full plan.
+  const hitStats = useMemo(
+    () => hitSummary(fullSchedule, state.hits, today),
+    [fullSchedule, state.hits, today],
+  );
 
   const setAccounts = (accounts: Account[]) => setState((s) => ({ ...s, accounts }));
   const setStart = (startDate: string) => setState((s) => ({ ...s, startDate }));
   const setMode = (tradingDayMode: TradingDayMode) =>
     setState((s) => ({ ...s, tradingDayMode }));
+  const setHit = (iso: string, status: "hit" | "miss" | null) =>
+    setState((s) => {
+      const hits = { ...(s.hits || {}) };
+      if (status === null) delete hits[iso];
+      else hits[iso] = status;
+      return { ...s, hits };
+    });
 
   const reset = () => {
     if (confirm("Reset all accounts to the sample data?")) {
@@ -622,6 +635,19 @@ export default function Home() {
             </select>
           </div>
         </div>
+        <div className="hit-progress">
+          <span className="hit-stat">
+            <strong>{hitStats.hit}</strong>/{hitStats.totalPast} days hit
+          </span>
+          {hitStats.miss > 0 && (
+            <span className="hit-stat miss">✕ {hitStats.miss} missed</span>
+          )}
+          {hitStats.pending > 0 && (
+            <span className="hit-stat pending">○ {hitStats.pending} to log</span>
+          )}
+          <span className="hit-stat streak">🔥 {hitStats.streak}-day streak</span>
+          <span className="hint">Click a day, then mark it hit or missed.</span>
+        </div>
         {focusedAccount && (
           <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
             Focused on <strong>{focusedAccount.firm} {focusedAccount.size}</strong> —
@@ -635,6 +661,8 @@ export default function Home() {
           startISO={focusedAccount?.startDate || state.startDate}
           tradingDayMode={state.tradingDayMode}
           todayISO={today}
+          hits={state.hits}
+          onSetHit={setHit}
         />
       </section>
 

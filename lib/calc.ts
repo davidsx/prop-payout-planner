@@ -48,7 +48,15 @@ export interface PlannerState {
   createdAt?: number;
   /** Epoch ms of the last write (server-stamped). */
   updatedAt?: number;
+  /**
+   * Actual daily result for the base target, keyed by ISO date: "hit" or
+   * "miss". A trackable day with no entry is "pending". Tracking only — it does
+   * not change the projected schedule.
+   */
+  hits?: Record<string, "hit" | "miss">;
 }
+
+export type HitStatus = "hit" | "miss";
 
 /** Compact metadata for one saved version (used by the version manager). */
 export interface VersionMeta {
@@ -418,6 +426,50 @@ export function monthlySummary(schedule: Schedule): MonthSummary[] {
     m.payout += d.payoutTotal;
   }
   return [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+}
+
+// ---------------------------------------------------------------------------
+// Daily "base hit" tracking
+// ---------------------------------------------------------------------------
+
+export interface HitSummary {
+  hit: number;
+  miss: number;
+  pending: number; // past/today trackable days not yet marked
+  totalPast: number; // trackable days up to and including today
+  streak: number; // trailing run of "hit" days (ignoring unmarked recent days)
+}
+
+/**
+ * Roll up daily hit/miss marks against the trackable trading days (days that
+ * carry a daily target). Only days up to `todayISO` count toward hit/miss;
+ * unmarked past days are "pending". Streak = the most recent unbroken run of
+ * "hit" days, skipping still-unmarked days at the very end.
+ */
+export function hitSummary(
+  schedule: Schedule,
+  hits: Record<string, HitStatus> | undefined,
+  todayISO: string,
+): HitSummary {
+  const marks = hits || {};
+  const past = schedule.days.filter((d) => d.dailyTargetTotal > 0 && d.iso <= todayISO);
+  let hit = 0;
+  let miss = 0;
+  let pending = 0;
+  for (const d of past) {
+    const m = marks[d.iso];
+    if (m === "hit") hit++;
+    else if (m === "miss") miss++;
+    else pending++;
+  }
+  let i = past.length - 1;
+  while (i >= 0 && !marks[past[i].iso]) i--; // skip unmarked recent days
+  let streak = 0;
+  while (i >= 0 && marks[past[i].iso] === "hit") {
+    streak++;
+    i--;
+  }
+  return { hit, miss, pending, totalPast: past.length, streak };
 }
 
 // ---------------------------------------------------------------------------
