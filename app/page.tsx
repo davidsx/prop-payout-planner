@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AccountEditor from "@/components/AccountEditor";
 import Calendar from "@/components/Calendar";
+import HitTracker from "@/components/HitTracker";
 import MonthlySummary from "@/components/MonthlySummary";
 import {
   Account,
@@ -13,6 +14,7 @@ import {
   accountTotalDays,
   buildSchedule,
   fromISO,
+  hitKey,
   hitSummary,
   money,
   monthlySummary,
@@ -358,11 +360,12 @@ export default function Home() {
   const setStart = (startDate: string) => setState((s) => ({ ...s, startDate }));
   const setMode = (tradingDayMode: TradingDayMode) =>
     setState((s) => ({ ...s, tradingDayMode }));
-  const setHit = (iso: string, status: "hit" | "miss" | null) =>
+  const toggleHit = (iso: string, accountId: string) =>
     setState((s) => {
       const hits = { ...(s.hits || {}) };
-      if (status === null) delete hits[iso];
-      else hits[iso] = status;
+      const k = hitKey(iso, accountId);
+      if (hits[k] === "hit") delete hits[k];
+      else hits[k] = "hit";
       return { ...s, hits };
     });
 
@@ -637,7 +640,7 @@ export default function Home() {
         </div>
         <div className="hit-progress">
           <span className="hit-stat">
-            <strong>{hitStats.hit}</strong>/{hitStats.totalPast} days hit
+            <strong>{hitStats.hit}</strong>/{hitStats.totalPast} targets hit
           </span>
           {hitStats.miss > 0 && (
             <span className="hit-stat miss">✕ {hitStats.miss} missed</span>
@@ -645,8 +648,8 @@ export default function Home() {
           {hitStats.pending > 0 && (
             <span className="hit-stat pending">○ {hitStats.pending} to log</span>
           )}
-          <span className="hit-stat streak">🔥 {hitStats.streak}-day streak</span>
-          <span className="hint">Click a day, then mark it hit or missed.</span>
+          <span className="hit-stat streak">🔥 {hitStats.streak}-day clean streak</span>
+          <span className="hint">Open a day, then mark each account hit or missed.</span>
         </div>
         {focusedAccount && (
           <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
@@ -662,7 +665,25 @@ export default function Home() {
           tradingDayMode={state.tradingDayMode}
           todayISO={today}
           hits={state.hits}
-          onSetHit={setHit}
+        />
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2>Base hits</h2>
+          <span className="hit-stat streak">🔥 {hitStats.streak}-day clean streak</span>
+        </div>
+        <p className="hint" style={{ marginTop: -4, marginBottom: 12 }}>
+          One box per trading day, per account. Click a box to toggle whether you hit
+          that day&apos;s base target — a quick log you can eyeball at a glance.
+        </p>
+        <HitTracker
+          accounts={state.accounts}
+          hits={state.hits}
+          globalStart={state.startDate}
+          tradingDayMode={state.tradingDayMode}
+          todayISO={today}
+          onToggle={toggleHit}
         />
       </section>
 
