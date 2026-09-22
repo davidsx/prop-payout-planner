@@ -99,7 +99,9 @@ export default function Calendar({
   type DayStatus = "hit" | "miss" | "pending";
   const GLYPH: Record<DayStatus, string> = { hit: "✅", miss: "❌", pending: "○" };
   const statusOf = (info: DaySchedule | undefined): DayStatus | null => {
-    if (!info || info.dailyTargetTotal <= 0 || info.iso > todayISO) return null;
+    // Only completed days get a hit/miss/pending mark — the in-progress day
+    // (todayISO) and future days don't, since the session isn't over.
+    if (!info || info.dailyTargetTotal <= 0 || info.iso >= todayISO) return null;
     let hit = 0;
     let miss = 0;
     for (const e of info.entries) {

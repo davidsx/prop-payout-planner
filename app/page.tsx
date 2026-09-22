@@ -51,6 +51,16 @@ function todayISO(): string {
   return toISO(new Date());
 }
 
+// The trading day ends with the New York close (~5am local the next morning),
+// so "today" for tracking rolls over at 5am rather than midnight — the current
+// session isn't counted as complete/loggable until then.
+const DAY_ROLLOVER_HOUR = 5;
+function tradingTodayISO(): string {
+  const d = new Date();
+  d.setHours(d.getHours() - DAY_ROLLOVER_HOUR);
+  return toISO(d);
+}
+
 function cleanSpace(raw: string): string {
   return raw.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 64);
 }
@@ -367,7 +377,8 @@ export default function Home() {
   const focusedAccount = activeFocus
     ? state.accounts.find((a) => a.id === activeFocus) || null
     : null;
-  const today = todayISO();
+  // Tracking "today" respects the ~5am trading-day rollover.
+  const today = tradingTodayISO();
   // Daily base-hit progress across the full plan.
   const hitStats = useMemo(
     () => hitSummary(fullSchedule, state.actuals, today),

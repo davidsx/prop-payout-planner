@@ -565,10 +565,11 @@ export interface HitSummary {
 
 /**
  * Roll up recorded actuals against each account-day's base target (the entry's
- * dailyTarget), counting in account-days. Only days up to `todayISO` count;
- * unrecorded past account-days are "pending". `delta` is the net over/under
- * across all recorded account-days. Streak = the most recent unbroken run of
- * fully-hit days, skipping still-unrecorded days at the very end.
+ * dailyTarget), counting in account-days. Only COMPLETED days count — the
+ * in-progress day `todayISO` is excluded, since its session isn't over yet.
+ * Unrecorded completed account-days are "pending". `delta` is the net
+ * over/under across recorded account-days. Streak = the most recent unbroken
+ * run of fully-hit days, skipping still-unrecorded days at the very end.
  */
 export function hitSummary(
   schedule: Schedule,
@@ -576,7 +577,7 @@ export function hitSummary(
   todayISO: string,
 ): HitSummary {
   const rec = actuals || {};
-  const past = schedule.days.filter((d) => d.dailyTargetTotal > 0 && d.iso <= todayISO);
+  const past = schedule.days.filter((d) => d.dailyTargetTotal > 0 && d.iso < todayISO);
   let hit = 0;
   let miss = 0;
   let pending = 0;
