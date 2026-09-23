@@ -718,7 +718,7 @@ tfoot td {
 /* Live projection cards */
 .live-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 .live-card {
@@ -1189,6 +1189,10 @@ tfoot td {
   }
   .title {
     font-size: 22px;
+  }
+  /* Live projection: one card per row on phones. */
+  .live-grid {
+    grid-template-columns: 1fr;
   }
   /* Stack Start date, Trading days and Reset one per row. */
   .controls {
