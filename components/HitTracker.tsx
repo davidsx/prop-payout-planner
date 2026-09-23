@@ -16,13 +16,20 @@ interface Props {
   actuals?: Record<string, number>;
   todayISO: string;
   onSetActual: (iso: string, accountId: string, value: number | null) => void;
+  onToggleRest: (iso: string, accountId: string) => void;
 }
 
-export default function HitTracker({ schedule, actuals, todayISO, onSetActual }: Props) {
+export default function HitTracker({
+  schedule,
+  actuals,
+  todayISO,
+  onSetActual,
+  onToggleRest,
+}: Props) {
   const rec = actuals || {};
   const [showUpcoming, setShowUpcoming] = useState(false);
 
-  const trackable = schedule.days.filter((d) => d.dailyTargetTotal > 0);
+  const trackable = schedule.days.filter((d) => d.entries.length > 0);
   const past = trackable.filter((d) => d.iso <= todayISO).reverse(); // newest first
   const upcoming = trackable.filter((d) => d.iso > todayISO);
 
@@ -30,11 +37,13 @@ export default function HitTracker({ schedule, actuals, todayISO, onSetActual }:
     const dt = fromISO(d.iso);
     const isToday = d.iso === todayISO;
     let logged = 0;
+    let trackableCount = 0;
     let net = 0;
     const rows = d.entries.map((e) => {
-      const actual = rec[hitKey(d.iso, e.accountId)];
+      const actual = e.rest ? undefined : rec[hitKey(d.iso, e.accountId)];
       const target = e.perAccountTarget;
       const res = resultOf(actual, target);
+      if (!e.rest) trackableCount++;
       if (actual !== undefined) {
         logged++;
         net += actual - target;
@@ -53,7 +62,7 @@ export default function HitTracker({ schedule, actuals, todayISO, onSetActual }:
             {isToday ? " · Today" : ""}
           </span>
           <span className="lg-day-sum">
-            {logged}/{rows.length} logged
+            {logged}/{trackableCount} logged
             {logged > 0 && (
               <>
                 {" · "}
@@ -69,36 +78,57 @@ export default function HitTracker({ schedule, actuals, todayISO, onSetActual }:
           {rows.map(({ e, actual, target, res }) => {
             const delta = actual === undefined ? 0 : actual - target;
             return (
-              <div className={`lg-row ${res}`} key={e.accountId}>
+              <div className={`lg-row ${e.rest ? "rest" : res}`} key={e.accountId}>
                 <span className="lg-acct">
                   {e.firm} <span className="muted">{e.size}</span>
                   <span className={`lg-stage ${e.phase}`}>{PHASE_LABEL[e.phase]}</span>
                 </span>
-                <span className="lg-target">
-                  target <strong>{money(target)}</strong>
-                </span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="actual $"
-                  value={actual ?? ""}
-                  onChange={(ev) =>
-                    onSetActual(
-                      d.iso,
-                      e.accountId,
-                      ev.target.value === "" ? null : Number(ev.target.value),
-                    )
-                  }
-                />
-                <span
-                  className={`lg-delta ${
-                    actual === undefined ? "" : delta >= 0 ? "up" : "down"
-                  }`}
-                >
-                  {actual === undefined
-                    ? "—"
-                    : `${delta >= 0 ? "+" : "−"}${money(Math.abs(delta))}`}
-                </span>
+                {e.rest ? (
+                  <>
+                    <span className="lg-rest-label">💤 Rest — not tradable</span>
+                    <button
+                      className="lg-rest-btn"
+                      onClick={() => onToggleRest(d.iso, e.accountId)}
+                    >
+                      Undo rest
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="lg-target">
+                      target <strong>{money(target)}</strong>
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      placeholder="actual $"
+                      value={actual ?? ""}
+                      onChange={(ev) =>
+                        onSetActual(
+                          d.iso,
+                          e.accountId,
+                          ev.target.value === "" ? null : Number(ev.target.value),
+                        )
+                      }
+                    />
+                    <span
+                      className={`lg-delta ${
+                        actual === undefined ? "" : delta >= 0 ? "up" : "down"
+                      }`}
+                    >
+                      {actual === undefined
+                        ? "—"
+                        : `${delta >= 0 ? "+" : "−"}${money(Math.abs(delta))}`}
+                    </span>
+                    <button
+                      className="lg-rest-btn"
+                      title="Mark as rest (not tradable / payout processing)"
+                      onClick={() => onToggleRest(d.iso, e.accountId)}
+                    >
+                      Rest
+                    </button>
+                  </>
+                )}
               </div>
             );
           })}

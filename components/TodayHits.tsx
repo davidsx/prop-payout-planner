@@ -16,21 +16,26 @@ import {
 interface Props {
   accounts: Account[];
   actuals?: Record<string, number>;
+  rests?: Record<string, true>;
   globalStart: string;
   tradingDayMode: TradingDayMode;
   todayISO: string;
   onSetActual: (iso: string, accountId: string, value: number | null) => void;
+  onToggleRest: (iso: string, accountId: string) => void;
 }
 
 export default function TodayHits({
   accounts,
   actuals,
+  rests,
   globalStart,
   tradingDayMode,
   todayISO,
   onSetActual,
+  onToggleRest,
 }: Props) {
   const rec = actuals || {};
+  const rst = rests || {};
 
   if (accounts.length === 0) {
     return <p className="hint">No accounts yet.</p>;
@@ -42,10 +47,10 @@ export default function TodayHits({
     const active = idx >= 0;
     const phase = active ? phaseAtIndex(a, idx) : null;
     const perAcct = phase ? dailyBaseHit(a[phase], a.minDay) : 0;
-    const target = perAcct; // per single account (copy-traded across the count)
-    const actual = active ? rec[hitKey(todayISO, a.id)] : undefined;
-    const result = resultOf(actual, target);
-    return { a, active, idx, phase, perAcct, target, actual, result };
+    const isRest = active && !!rst[hitKey(todayISO, a.id)];
+    const actual = active && !isRest ? rec[hitKey(todayISO, a.id)] : undefined;
+    const result = resultOf(actual, perAcct);
+    return { a, active, idx, phase, perAcct, actual, result, isRest };
   });
 
   const anyActive = cards.some((c) => c.active);
@@ -53,10 +58,11 @@ export default function TodayHits({
   return (
     <>
       <div className="today-hits">
-        {cards.map(({ a, active, idx, phase, perAcct, target, actual, result }) => {
-          const delta = actual === undefined ? 0 : actual - target;
+        {cards.map(({ a, active, idx, phase, perAcct, actual, result, isRest }) => {
+          const delta = actual === undefined ? 0 : actual - perAcct;
           const cls = ["th-card"];
-          if (result === "hit") cls.push("on");
+          if (isRest) cls.push("rest");
+          else if (result === "hit") cls.push("on");
           else if (result === "miss") cls.push("under");
           if (!active) cls.push("idle");
           return (
@@ -67,7 +73,19 @@ export default function TodayHits({
                 </span>
                 {active && <span className="th-day">D{idx + 1}</span>}
               </span>
-              {active ? (
+              {!active ? (
+                <span className="th-status idle">No session today</span>
+              ) : isRest ? (
+                <div className="th-actual">
+                  <span className="th-status rest">💤 Rest day (not tradable)</span>
+                  <button
+                    className="th-rest-btn"
+                    onClick={() => onToggleRest(todayISO, a.id)}
+                  >
+                    Undo
+                  </button>
+                </div>
+              ) : (
                 <>
                   <div className="th-need-row">
                     <span className="th-need">
@@ -98,10 +116,15 @@ export default function TodayHits({
                         {money(Math.abs(delta))}
                       </span>
                     )}
+                    <button
+                      className="th-rest-btn"
+                      title="Mark this day as rest (payout processing / not tradable)"
+                      onClick={() => onToggleRest(todayISO, a.id)}
+                    >
+                      Rest
+                    </button>
                   </div>
                 </>
-              ) : (
-                <span className="th-status idle">No session today</span>
               )}
             </div>
           );

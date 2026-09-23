@@ -360,7 +360,8 @@ export default function Home() {
   // Full plan (all accounts) drives the top stat cards. In Live mode it is
   // re-paced from the recorded actuals.
   const fullSchedule = useMemo(
-    () => (liveMode ? buildLiveSchedule(state, state.actuals) : buildSchedule(state)),
+    () =>
+      liveMode ? buildLiveSchedule(state, state.actuals, state.rests) : buildSchedule(state),
     [liveMode, state],
   );
   // Calendar + monthly view honor the focused account (if any).
@@ -369,7 +370,7 @@ export default function Home() {
   const schedule = useMemo(
     () =>
       liveMode
-        ? buildLiveSchedule(state, state.actuals, activeFocus)
+        ? buildLiveSchedule(state, state.actuals, state.rests, activeFocus)
         : buildSchedule(state, activeFocus),
     [liveMode, state, activeFocus],
   );
@@ -385,7 +386,7 @@ export default function Home() {
     [fullSchedule, state.actuals, today],
   );
   const liveStats = useMemo(
-    () => liveProjection(state, state.actuals, today),
+    () => liveProjection(state, state.actuals, today, state.rests),
     [state, today],
   );
 
@@ -396,10 +397,29 @@ export default function Home() {
   const setActual = (iso: string, accountId: string, value: number | null) =>
     setState((s) => {
       const actuals = { ...(s.actuals || {}) };
+      const rests = { ...(s.rests || {}) };
       const k = hitKey(iso, accountId);
       if (value === null || Number.isNaN(value)) delete actuals[k];
-      else actuals[k] = value;
-      return { ...s, actuals };
+      else {
+        actuals[k] = value;
+        delete rests[k]; // a recorded amount clears a rest mark
+      }
+      return { ...s, actuals, rests };
+    });
+
+  // Toggle a day as "rest / not tradable" (e.g. payout processing).
+  const toggleRest = (iso: string, accountId: string) =>
+    setState((s) => {
+      const rests = { ...(s.rests || {}) };
+      const actuals = { ...(s.actuals || {}) };
+      const k = hitKey(iso, accountId);
+      if (rests[k]) {
+        delete rests[k];
+      } else {
+        rests[k] = true;
+        delete actuals[k]; // marking rest clears any recorded amount
+      }
+      return { ...s, rests, actuals };
     });
 
   const reset = () => {
@@ -685,10 +705,12 @@ export default function Home() {
         <TodayHits
           accounts={state.accounts}
           actuals={state.actuals}
+          rests={state.rests}
           globalStart={state.startDate}
           tradingDayMode={state.tradingDayMode}
           todayISO={today}
           onSetActual={setActual}
+          onToggleRest={toggleRest}
         />
       </section>
 
@@ -782,6 +804,7 @@ export default function Home() {
               actuals={state.actuals}
               todayISO={today}
               onSetActual={setActual}
+              onToggleRest={toggleRest}
             />
           </div>
         </div>

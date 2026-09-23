@@ -929,6 +929,45 @@ tfoot td {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* Rest day (not tradable) */
+.th-card.rest {
+  background: var(--bg-elev-2);
+  border-style: dashed;
+}
+.th-status.rest {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.th-rest-btn,
+.lg-rest-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.th-rest-btn:hover,
+.lg-rest-btn:hover {
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+.dot.rest {
+  background: var(--text-faint);
+}
+.lg-row.rest {
+  border-left-color: var(--text-faint);
+}
+.lg-rest-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
 .up {
   color: var(--accent-text);
 }

@@ -104,13 +104,17 @@ export default function Calendar({
     if (!info || info.dailyTargetTotal <= 0 || info.iso >= todayISO) return null;
     let hit = 0;
     let miss = 0;
+    let n = 0;
     for (const e of info.entries) {
+      if (e.rest) continue; // rest days aren't a hit or miss
+      n++;
       const r = resultOf(actuals?.[hitKey(info.iso, e.accountId)], e.perAccountTarget);
       if (r === "hit") hit++;
       else if (r === "miss") miss++;
     }
+    if (n === 0) return null;
     if (miss > 0) return "miss";
-    if (info.entries.length > 0 && hit === info.entries.length) return "hit";
+    if (hit === n) return "hit";
     return "pending";
   };
 
@@ -196,8 +200,12 @@ export default function Calendar({
                       {info.entries.map((e, k) => (
                         <span
                           key={k}
-                          className={`dot ${e.phase}`}
-                          title={`${e.firm} ${e.size}${e.count > 1 ? ` ×${e.count}` : ""} — ${PHASE_LABEL[e.phase]} · ${money(e.dailyTarget)}/day`}
+                          className={`dot ${e.rest ? "rest" : e.phase}`}
+                          title={
+                            e.rest
+                              ? `${e.firm} ${e.size} — rest day (not tradable)`
+                              : `${e.firm} ${e.size}${e.count > 1 ? ` ×${e.count}` : ""} — ${PHASE_LABEL[e.phase]} · ${money(e.dailyTarget)}/day`
+                          }
                         />
                       ))}
                     </div>
@@ -243,7 +251,7 @@ export default function Calendar({
                 <span className="agenda-body">
                   <span className="agenda-dots">
                     {info.entries.map((e, k) => (
-                      <span key={k} className={`dot ${e.phase}`} />
+                      <span key={k} className={`dot ${e.rest ? "rest" : e.phase}`} />
                     ))}
                   </span>
                   {info.dailyTargetTotal > 0 && (

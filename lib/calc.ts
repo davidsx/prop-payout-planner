@@ -55,6 +55,12 @@ export interface PlannerState {
    * does not change the projected schedule.
    */
   actuals?: Record<string, number>;
+  /**
+   * Days an account was NOT tradable (e.g. payout processing), keyed by
+   * `${iso}|${accountId}`. A rest day makes no progress and isn't counted as a
+   * hit or miss — it just pushes the cycle later.
+   */
+  rests?: Record<string, true>;
 }
 
 /** hit = actual met/exceeded target, miss = below, pending = not recorded. */
@@ -226,6 +232,9 @@ export interface DayAccountEntry {
   perAccountTarget: number;
   /** Combined daily target = perAccountTarget * count. */
   dailyTarget: number;
+  /** Rest day — account not tradable (e.g. payout processing). No target;
+   *  contributes no progress and isn't counted as a hit/miss. */
+  rest?: boolean;
 }
 
 export interface PayoutEvent {
@@ -416,12 +425,14 @@ export function buildSchedule(state: PlannerState, focusId?: string | null): Sch
 export function buildLiveSchedule(
   state: PlannerState,
   actuals: Record<string, number> | undefined,
+  rests: Record<string, true> | undefined,
   focusId?: string | null,
 ): Schedule {
   const accounts = focusId
     ? state.accounts.filter((a) => a.id === focusId)
     : state.accounts;
   const rec = actuals || {};
+  const rst = rests || {};
 
   const byIso = new Map<string, DaySchedule>();
   const ensureDay = (iso: string): DaySchedule => {
@@ -469,6 +480,22 @@ export function buildLiveSchedule(
       if (steps[si].pace <= 0) break;
 
       const step = steps[si];
+
+      // Rest day: account not tradable — show it, but no target, no progress.
+      if (rst[hitKey(iso, a.id)]) {
+        day.entries.push({
+          accountId: a.id,
+          firm: a.firm,
+          size: a.size,
+          phase: step.key,
+          count: a.count,
+          perAccountTarget: 0,
+          dailyTarget: 0,
+          rest: true,
+        });
+        continue;
+      }
+
       const perAccount = step.pace;
       const combined = perAccount * a.count;
       day.entries.push({
@@ -585,11 +612,16 @@ export function hitSummary(
   // Per-day rollup: "hit" (all hit), "miss" (any miss), "none" (none recorded),
   // "partial" (some recorded, no miss) — used for the streak.
   const dayStatus: ("hit" | "miss" | "none" | "partial")[] = [];
+  let totalPast = 0;
   for (const d of past) {
     let dh = 0;
     let dm = 0;
     let dRec = 0;
+    let n = 0; // trackable (non-rest) entries this day
     for (const e of d.entries) {
+      if (e.rest) continue; // rest days aren't counted as hit/miss/pending
+      n++;
+      totalPast++;
       // Actuals are recorded per single account (copy-traded), so compare to
       // the per-account base target, not the count-multiplied total.
       const actual = rec[hitKey(d.iso, e.accountId)];
@@ -608,8 +640,7 @@ export function hitSummary(
         dm++;
       }
     }
-    const n = d.entries.length;
-    dayStatus.push(dm > 0 ? "miss" : dRec === 0 ? "none" : dh === n ? "hit" : "partial");
+    dayStatus.push(n === 0 ? "none" : dm > 0 ? "miss" : dRec === 0 ? "none" : dh === n ? "hit" : "partial");
   }
   let i = dayStatus.length - 1;
   while (i >= 0 && dayStatus[i] === "none") i--; // skip unrecorded recent days
@@ -618,7 +649,6 @@ export function hitSummary(
     streak++;
     i--;
   }
-  const totalPast = past.reduce((s, d) => s + d.entries.length, 0);
   return { hit, miss, pending, totalPast, streak, delta };
 }
 
@@ -663,6 +693,7 @@ function walkAccount(
   steps: LiveStep[],
   isoList: string[],
   actuals: Record<string, number> | undefined,
+  rests: Record<string, true> | undefined,
   todayISO: string,
 ): WalkResult {
   let si = 0;
@@ -686,10 +717,12 @@ function walkAccount(
     }
     if (si < steps.length) {
       if (steps[si].pace <= 0) break; // can't make progress; leave unfinished
+      const isRest = !!rests?.[hitKey(iso, a.id)];
       const pace = steps[si].pace;
-      const amt = actuals?.[hitKey(iso, a.id)] ?? pace;
+      // A rest day makes no progress (and no over/under); it just delays.
+      const amt = isRest ? 0 : (actuals?.[hitKey(iso, a.id)] ?? pace);
       if (iso <= todayISO) {
-        cycleDelta += amt - pace;
+        if (!isRest) cycleDelta += amt - pace;
         started = true;
       }
       acc += amt;
@@ -743,6 +776,7 @@ export function liveProjection(
   state: PlannerState,
   actuals: Record<string, number> | undefined,
   todayISO: string,
+  rests?: Record<string, true>,
 ): AccountLive[] {
   return state.accounts.map((a) => {
     const steps = liveSteps(a);
@@ -751,15 +785,17 @@ export function liveProjection(
     const horizon = Math.max(1, accountTotalDays(a) + 150);
     const isoList = tradingDates(start, horizon, state.tradingDayMode);
 
-    const live = walkAccount(a, steps, isoList, actuals, todayISO);
-    const plan = walkAccount(a, steps, isoList, undefined, todayISO);
+    const live = walkAccount(a, steps, isoList, actuals, rests, todayISO);
+    const plan = walkAccount(a, steps, isoList, undefined, undefined, todayISO);
 
     const done = live.snapStep >= steps.length;
     const cur = done ? null : steps[live.snapStep];
     const phaseTarget = cur ? cur.target : 0;
     // Fold today's logged amount into the current phase's progress (the phase
-    // doesn't advance off the in-progress day — see walkAccount).
-    const todayActual = actuals?.[hitKey(todayISO, a.id)];
+    // doesn't advance off the in-progress day — see walkAccount). A rest day
+    // today contributes nothing.
+    const todayRest = !!rests?.[hitKey(todayISO, a.id)];
+    const todayActual = todayRest ? undefined : actuals?.[hitKey(todayISO, a.id)];
     const earnedInPhase = done ? 0 : live.snapAcc + (todayActual ?? 0);
     const remaining = cur ? Math.max(0, cur.target - earnedInPhase) : 0;
     const pct = cur && cur.target > 0 ? Math.min(1, earnedInPhase / cur.target) : done ? 1 : 0;
