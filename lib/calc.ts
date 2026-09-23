@@ -654,8 +654,8 @@ interface WalkResult {
   finish: string | null; // ISO date the last step completes
   snapStep: number; // step index in progress as of today
   snapAcc: number; // profit accumulated toward that step as of today
+  snapDelta: number; // (actual − pace) within the CURRENT cycle, entering today
   started: boolean;
-  delta: number; // (actual − pace) summed over logged days up to today
 }
 
 function walkAccount(
@@ -667,9 +667,10 @@ function walkAccount(
 ): WalkResult {
   let si = 0;
   let acc = 0;
-  let delta = 0;
+  let cycleDelta = 0; // (actual − pace) within the current cycle; resets each cycle
   let snapStep = 0;
   let snapAcc = 0;
+  let snapDelta = 0;
   let started = false;
   let pending = 0; // payouts due the next trading day
   const payouts: string[] = [];
@@ -688,7 +689,7 @@ function walkAccount(
       const pace = steps[si].pace;
       const amt = actuals?.[hitKey(iso, a.id)] ?? pace;
       if (iso <= todayISO) {
-        delta += amt - pace;
+        cycleDelta += amt - pace;
         started = true;
       }
       acc += amt;
@@ -696,6 +697,7 @@ function walkAccount(
         acc -= steps[si].target;
         if (steps[si].payout) pending += 1;
         si += 1;
+        cycleDelta = 0; // a new cycle starts fresh — ahead/behind resets
       }
     }
     // Snapshot the phase/progress as of ENTERING today — the in-progress day
@@ -704,9 +706,10 @@ function walkAccount(
     if (iso < todayISO) {
       snapStep = si;
       snapAcc = acc;
+      snapDelta = cycleDelta;
     }
   }
-  return { payouts, finish, snapStep, snapAcc, started, delta };
+  return { payouts, finish, snapStep, snapAcc, snapDelta, started };
 }
 
 export interface AccountLive {
@@ -723,7 +726,7 @@ export interface AccountLive {
   phaseTarget: number;
   remaining: number;
   pct: number; // 0..1 progress toward the current phase target
-  paceDelta: number; // ahead(+)/behind(−) vs plan, cumulative to today
+  paceDelta: number; // ahead(+)/behind(−) vs plan, for the current cycle only
   nextPayoutPlanISO: string | null;
   nextPayoutLiveISO: string | null;
   onTimeDailyNeeded: number | null; // $/day to hit next payout by its plan date
@@ -760,6 +763,10 @@ export function liveProjection(
     const earnedInPhase = done ? 0 : live.snapAcc + (todayActual ?? 0);
     const remaining = cur ? Math.max(0, cur.target - earnedInPhase) : 0;
     const pct = cur && cur.target > 0 ? Math.min(1, earnedInPhase / cur.target) : done ? 1 : 0;
+    // Ahead/behind for the CURRENT cycle only (resets each cycle): the cycle's
+    // logged over/under entering today, plus today's own over/under.
+    const todayDelta = !done && todayActual !== undefined && cur ? todayActual - cur.pace : 0;
+    const paceDelta = done ? 0 : live.snapDelta + todayDelta;
     const payoutNo = Math.min(totalPayouts, steps.slice(0, live.snapStep + 1).filter((s) => s.payout).length || 1);
 
     const nextPayoutLiveISO = live.payouts.find((d) => d > todayISO) ?? null;
@@ -787,7 +794,7 @@ export function liveProjection(
       phaseTarget,
       remaining,
       pct,
-      paceDelta: live.delta,
+      paceDelta,
       nextPayoutPlanISO,
       nextPayoutLiveISO,
       onTimeDailyNeeded,
