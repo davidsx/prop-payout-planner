@@ -648,6 +648,7 @@ export default function Home() {
                     firm: "New firm",
                     size: "50k",
                     count: 1,
+                    cycles: 5,
                     payout: 2000,
                     rate: 0.9,
                     minDay: 200,

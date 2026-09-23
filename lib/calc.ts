@@ -107,10 +107,13 @@ export function dailyBaseHit(phase: Phase, minDay: number): number {
   return Math.max(Math.round(phase.target / phase.days), minDay);
 }
 
+/** Default number of payout cycles when an account doesn't specify one. */
+export const DEFAULT_CYCLES = 5;
+
 /** Total payout cycles for an account (1st target + Remaining re-hits). */
 export function cyclesOf(a: Account): number {
   const c = a.cycles;
-  return c && c > 0 ? Math.floor(c) : Math.max(1, a.count);
+  return c && c > 0 ? Math.floor(c) : DEFAULT_CYCLES;
 }
 
 /**

@@ -1,7 +1,9 @@
 "use client";
 
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import {
   Account,
+  DEFAULT_CYCLES,
   accountTakeHome,
   accountTotalDays,
   cyclesOf,
@@ -10,6 +12,54 @@ import {
   newId,
   payoutTakeHome,
 } from "@/lib/calc";
+
+function parseNum(v: string): number {
+  const n = Number(v.replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * A numeric input you can clear and retype freely. While focused it holds
+ * whatever you type (including empty); it commits the parsed number as you go
+ * and normalizes the display on blur, so clearing no longer snaps to 0/1.
+ */
+function NumField({
+  value,
+  onCommit,
+  className,
+  style,
+}: {
+  value: number;
+  onCommit: (n: number) => void;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const [text, setText] = useState(() => String(value));
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setText(String(value));
+  }, [value]);
+  return (
+    <input
+      className={className}
+      style={style}
+      inputMode="decimal"
+      value={text}
+      onFocus={() => {
+        focused.current = true;
+      }}
+      onChange={(e) => {
+        const t = e.target.value;
+        setText(t);
+        if (t.trim() !== "") onCommit(parseNum(t));
+      }}
+      onBlur={(e) => {
+        focused.current = false;
+        setText(e.target.value.trim() === "" ? String(value) : String(parseNum(e.target.value)));
+      }}
+    />
+  );
+}
 
 interface Props {
   accounts: Account[];
@@ -28,11 +78,6 @@ export default function AccountEditor({
   const update = (id: string, mutate: (a: Account) => Account) =>
     onChange(accounts.map((a) => (a.id === id ? mutate({ ...a }) : a)));
 
-  const num = (v: string) => {
-    const n = Number(v.replace(/[^0-9.\-]/g, ""));
-    return Number.isFinite(n) ? n : 0;
-  };
-
   const addRow = () =>
     onChange([
       ...accounts,
@@ -41,6 +86,7 @@ export default function AccountEditor({
         firm: "New firm",
         size: "50k",
         count: 1,
+        cycles: DEFAULT_CYCLES,
         payout: 2000,
         rate: 0.9,
         minDay: 200,
@@ -127,109 +173,87 @@ export default function AccountEditor({
                 />
               </td>
               <td>
-                <input
+                <NumField
                   value={a.count}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.count = num(e.target.value)), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.count = n), x))}
                 />
               </td>
               <td>
-                <input
+                <NumField
                   value={cyclesOf(a)}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.cycles = num(e.target.value)), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.cycles = n), x))}
                 />
               </td>
               <td>
-                <input
+                <NumField
                   className="wide"
                   value={a.payout}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.payout = num(e.target.value)), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.payout = n), x))}
                 />
               </td>
               <td>
-                <input
-                  value={a.rate}
+                <NumField
                   style={{ width: 48 }}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.rate = num(e.target.value)), x))
-                  }
+                  value={a.rate}
+                  onCommit={(n) => update(a.id, (x) => ((x.rate = n), x))}
                 />
               </td>
               <td className="derived">{money(payoutTakeHome(a))}</td>
               <td className="derived">{money(accountTakeHome(a))}</td>
               <td>
-                <input
+                <NumField
                   value={a.minDay}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.minDay = num(e.target.value)), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.minDay = n), x))}
                 />
               </td>
 
               {/* Eval */}
               <td>
-                <input
+                <NumField
                   className="wide"
                   value={a.eval.target}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.eval = { ...x.eval, target: num(e.target.value) }), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.eval = { ...x.eval, target: n }), x))}
                 />
               </td>
               <td>
-                <input
+                <NumField
                   style={{ width: 44 }}
                   value={a.eval.days}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.eval = { ...x.eval, days: num(e.target.value) }), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.eval = { ...x.eval, days: n }), x))}
                 />
               </td>
               <td className="derived">{dailyBaseHit(a.eval, a.minDay).toLocaleString()}</td>
 
               {/* First */}
               <td>
-                <input
+                <NumField
                   className="wide"
                   value={a.first.target}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.first = { ...x.first, target: num(e.target.value) }), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.first = { ...x.first, target: n }), x))}
                 />
               </td>
               <td>
-                <input
+                <NumField
                   style={{ width: 44 }}
                   value={a.first.days}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.first = { ...x.first, days: num(e.target.value) }), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.first = { ...x.first, days: n }), x))}
                 />
               </td>
               <td className="derived">{dailyBaseHit(a.first, a.minDay).toLocaleString()}</td>
 
               {/* Remaining */}
               <td>
-                <input
+                <NumField
                   className="wide"
                   value={a.remaining.target}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.remaining = { ...x.remaining, target: num(e.target.value) }), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.remaining = { ...x.remaining, target: n }), x))}
                 />
               </td>
               <td>
-                <input
+                <NumField
                   style={{ width: 44 }}
                   value={a.remaining.days}
-                  onChange={(e) =>
-                    update(a.id, (x) => ((x.remaining = { ...x.remaining, days: num(e.target.value) }), x))
-                  }
+                  onCommit={(n) => update(a.id, (x) => ((x.remaining = { ...x.remaining, days: n }), x))}
                 />
               </td>
               <td className="derived">
