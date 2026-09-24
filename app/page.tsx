@@ -115,6 +115,8 @@ export default function Home() {
   // Enables remote writes only after the initial server load has resolved.
   const canPush = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncRef = useRef(sync);
+  syncRef.current = sync;
 
   // Remember the current space in localStorage and keep the address bar clean
   // (strip any ?space= param; sharing is done explicitly via "Copy link").
@@ -357,6 +359,43 @@ export default function Home() {
     }
   };
 
+  // Re-fetch the current version from the server (manual + auto refresh). Useful
+  // in the installed PWA, where there's no browser reload button.
+  const reload = async () => {
+    if (!space || syncRef.current === "loading" || syncRef.current === "saving") return;
+    canPush.current = false;
+    setSync("loading");
+    try {
+      const r = await fetch(`/api/plan?space=${encodeURIComponent(space)}`);
+      const d = await r.json();
+      if (!d.configured) {
+        setSync("local");
+        return;
+      }
+      if (isValidState(d.state)) setState(d.state);
+      canPush.current = true;
+      setSync("synced");
+      refreshVersions();
+    } catch {
+      setSync("error");
+    }
+  };
+
+  // Auto-refresh when the app/tab comes back to the foreground.
+  useEffect(() => {
+    if (!mounted) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") reload();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, space]);
+
   // Full plan (all accounts) drives the top stat cards. In Live mode it is
   // re-paced from the recorded actuals.
   const fullSchedule = useMemo(
@@ -514,6 +553,14 @@ export default function Home() {
             </button>
           </>
         )}
+        <button
+          className="btn"
+          onClick={reload}
+          disabled={sync === "local" || sync === "loading" || sync === "saving"}
+          title="Reload the latest saved data from the cloud"
+        >
+          ↻ Refresh
+        </button>
         <button className="btn" onClick={copySyncLink} disabled={sync === "local"}>
           Copy link
         </button>
