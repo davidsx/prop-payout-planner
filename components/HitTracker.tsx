@@ -10,6 +10,7 @@ import {
   money,
   resultOf,
 } from "@/lib/calc";
+import ActualInput from "./ActualInput";
 
 interface Props {
   schedule: Schedule;
@@ -98,18 +99,10 @@ export default function HitTracker({
                     <span className="lg-target">
                       target <strong>{money(target)}</strong>
                     </span>
-                    <input
-                      type="number"
-                      inputMode="decimal"
+                    <ActualInput
+                      value={actual}
                       placeholder="actual $"
-                      value={actual ?? ""}
-                      onChange={(ev) =>
-                        onSetActual(
-                          d.iso,
-                          e.accountId,
-                          ev.target.value === "" ? null : Number(ev.target.value),
-                        )
-                      }
+                      onCommit={(n) => onSetActual(d.iso, e.accountId, n)}
                     />
                     <span
                       className={`lg-delta ${

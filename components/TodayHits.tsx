@@ -9,6 +9,7 @@ import {
   money,
   resultOf,
 } from "@/lib/calc";
+import ActualInput from "./ActualInput";
 
 interface Props {
   accounts: Account[];
@@ -99,18 +100,10 @@ export default function TodayHits({
                     )}
                   </div>
                   <div className="th-actual">
-                    <input
-                      type="number"
-                      inputMode="decimal"
+                    <ActualInput
+                      value={actual}
                       placeholder="actual $"
-                      value={actual ?? ""}
-                      onChange={(e) =>
-                        onSetActual(
-                          todayISO,
-                          a.id,
-                          e.target.value === "" ? null : Number(e.target.value),
-                        )
-                      }
+                      onCommit={(n) => onSetActual(todayISO, a.id, n)}
                     />
                     {actual !== undefined && (
                       <span className={`th-delta ${delta >= 0 ? "up" : "down"}`}>
