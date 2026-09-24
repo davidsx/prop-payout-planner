@@ -910,7 +910,7 @@ tfoot td {
   margin-top: 2px;
 }
 .th-actual input {
-  width: 96px;
+  width: 72px;
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
   color: var(--text);
