@@ -705,10 +705,8 @@ export default function Home() {
         </p>
         <TodayHits
           accounts={state.accounts}
+          schedule={fullSchedule}
           actuals={state.actuals}
-          rests={state.rests}
-          globalStart={state.startDate}
-          tradingDayMode={state.tradingDayMode}
           todayISO={today}
           onSetActual={setActual}
           onToggleRest={toggleRest}

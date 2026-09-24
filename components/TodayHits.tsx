@@ -2,23 +2,18 @@
 
 import {
   Account,
+  DayAccountEntry,
   PHASE_LABEL,
-  TradingDayMode,
-  accountTotalDays,
-  dailyBaseHit,
+  Schedule,
   hitKey,
   money,
-  phaseAtIndex,
   resultOf,
-  tradingDates,
 } from "@/lib/calc";
 
 interface Props {
   accounts: Account[];
+  schedule: Schedule; // the live (or plan) schedule — drives today's phase/target
   actuals?: Record<string, number>;
-  rests?: Record<string, true>;
-  globalStart: string;
-  tradingDayMode: TradingDayMode;
   todayISO: string;
   onSetActual: (iso: string, accountId: string, value: number | null) => void;
   onToggleRest: (iso: string, accountId: string) => void;
@@ -26,31 +21,38 @@ interface Props {
 
 export default function TodayHits({
   accounts,
+  schedule,
   actuals,
-  rests,
-  globalStart,
-  tradingDayMode,
   todayISO,
   onSetActual,
   onToggleRest,
 }: Props) {
   const rec = actuals || {};
-  const rst = rests || {};
 
   if (accounts.length === 0) {
     return <p className="hint">No accounts yet.</p>;
   }
 
+  // One pass over the (ascending) schedule: today's entry + day-number per account.
+  const todayEntry: Record<string, DayAccountEntry> = {};
+  const dayNo: Record<string, number> = {};
+  for (const d of schedule.days) {
+    if (d.iso > todayISO) break;
+    for (const e of d.entries) {
+      dayNo[e.accountId] = (dayNo[e.accountId] || 0) + 1;
+      if (d.iso === todayISO) todayEntry[e.accountId] = e;
+    }
+  }
+
   const cards = accounts.map((a) => {
-    const days = tradingDates(a.startDate || globalStart, accountTotalDays(a), tradingDayMode);
-    const idx = days.indexOf(todayISO);
-    const active = idx >= 0;
-    const phase = active ? phaseAtIndex(a, idx) : null;
-    const perAcct = phase ? dailyBaseHit(a[phase], a.minDay) : 0;
-    const isRest = active && !!rst[hitKey(todayISO, a.id)];
+    const entry = todayEntry[a.id];
+    const active = !!entry;
+    const isRest = !!entry?.rest;
+    const phase = entry?.phase ?? null;
+    const perAcct = entry?.perAccountTarget ?? 0;
     const actual = active && !isRest ? rec[hitKey(todayISO, a.id)] : undefined;
     const result = resultOf(actual, perAcct);
-    return { a, active, idx, phase, perAcct, actual, result, isRest };
+    return { a, active, isRest, phase, perAcct, actual, result, dayNo: dayNo[a.id] ?? 0 };
   });
 
   const anyActive = cards.some((c) => c.active);
@@ -58,7 +60,7 @@ export default function TodayHits({
   return (
     <>
       <div className="today-hits">
-        {cards.map(({ a, active, idx, phase, perAcct, actual, result, isRest }) => {
+        {cards.map(({ a, active, isRest, phase, perAcct, actual, result, dayNo }) => {
           const delta = actual === undefined ? 0 : actual - perAcct;
           const cls = ["th-card"];
           if (isRest) cls.push("rest");
@@ -71,7 +73,7 @@ export default function TodayHits({
                 <span className="th-name">
                   {a.firm} <span className="muted">{a.size}</span>
                 </span>
-                {active && <span className="th-day">D{idx + 1}</span>}
+                {active && <span className="th-day">D{dayNo}</span>}
               </span>
               {!active ? (
                 <span className="th-status idle">No session today</span>
