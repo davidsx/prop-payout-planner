@@ -418,7 +418,22 @@ table.editor thead th {
   font-size: 11px;
   color: var(--text-dim);
   font-weight: 600;
+  z-index: 2;
+}
+/* Freeze the Prop firm column while scrolling the table sideways. */
+table.editor .sticky-col {
+  position: sticky;
+  left: 0;
+  background: var(--bg-elev);
   z-index: 1;
+  box-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.35);
+}
+table.editor thead th.sticky-col {
+  background: var(--bg-elev-2);
+  z-index: 3;
+}
+table.editor tbody tr:hover .sticky-col {
+  background: var(--bg-elev-2);
 }
 table.editor thead tr.groups th {
   text-align: center;

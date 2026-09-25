@@ -108,7 +108,8 @@ export default function AccountEditor({
       <table className="editor" inert={locked}>
         <thead>
           <tr className="groups">
-            <th className="text" colSpan={10}></th>
+            <th className="text sticky-col"></th>
+            <th colSpan={9}></th>
             <th className="grp-eval" colSpan={3}>
               Eval target
             </th>
@@ -121,7 +122,7 @@ export default function AccountEditor({
             <th colSpan={2}></th>
           </tr>
           <tr>
-            <th className="text">Prop firm</th>
+            <th className="text sticky-col">Prop firm</th>
             <th>Size</th>
             <th>Start</th>
             <th title="Parallel accounts running this identical config">Count</th>
@@ -147,7 +148,7 @@ export default function AccountEditor({
         <tbody>
           {accounts.map((a) => (
             <tr key={a.id}>
-              <td className="text">
+              <td className="text sticky-col">
                 <input
                   className="text"
                   value={a.firm}
@@ -275,7 +276,7 @@ export default function AccountEditor({
         </tbody>
         <tfoot>
           <tr>
-            <td className="text">Total</td>
+            <td className="text sticky-col">Total</td>
             <td colSpan={6}></td>
             <td className="derived">{money(grandPerPayout)}</td>
             <td className="derived">{money(grandTotal)}</td>
