@@ -471,6 +471,15 @@ export default function Home() {
   const worstLoss = lossBreaches.some((b) => b.level === "red") ? "red" : "yellow";
   const redLosses = lossBreaches.filter((b) => b.level === "red").length;
   const yellowLosses = lossBreaches.length - redLosses;
+  const breachDates = Array.from(new Set(lossBreaches.map((b) => b.iso))).sort();
+  const fmtShort = (iso: string) =>
+    fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const breachDateLabel =
+    breachDates.length === 0
+      ? ""
+      : breachDates.length === 1
+        ? fmtShort(breachDates[0])
+        : `${fmtShort(breachDates[0])} – ${fmtShort(breachDates[breachDates.length - 1])}`;
 
   const setAccounts = (accounts: Account[]) => setState((s) => ({ ...s, accounts }));
   const setStart = (startDate: string) => setState((s) => ({ ...s, startDate }));
@@ -537,6 +546,7 @@ export default function Home() {
               <span className="risk-title">
                 {worstLoss === "red" ? "Heavy loss alert" : "Loss warning"}
               </span>
+              {breachDateLabel && <span className="risk-when">{breachDateLabel}</span>}
               <span className="risk-caption">
                 {[
                   redLosses ? `${redLosses} over 2×` : "",
@@ -550,17 +560,9 @@ export default function Home() {
             <div className="risk-list">
               {lossBreaches.map((b) => (
                 <div className={`risk-item ${b.level}`} key={b.key}>
-                  <div className="risk-item-head">
-                    <span className="risk-acct">
-                      {b.firm} <span className="muted">{b.size}</span>
-                    </span>
-                    <span className="risk-date">
-                      {fromISO(b.iso).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
-                  </div>
+                  <span className="risk-acct">
+                    {b.firm} <span className="muted">{b.size}</span>
+                  </span>
                   <div className="risk-amt">{money(b.actual)}</div>
                   <div className="risk-base">vs base {money(b.target)}</div>
                 </div>

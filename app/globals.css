@@ -163,21 +163,19 @@ select {
 .risk-item.yellow {
   --risk: var(--gold);
 }
-.risk-item-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+.risk-when {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--risk);
+  background: color-mix(in srgb, var(--risk) 16%, transparent);
+  padding: 1px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 .risk-acct {
   font-weight: 600;
   font-size: 13px;
   min-width: 0;
-}
-.risk-date {
-  font-size: 11px;
-  color: var(--text-faint);
-  white-space: nowrap;
 }
 .risk-amt {
   font-weight: 800;
@@ -1314,7 +1312,7 @@ tfoot td {
     position: static;
   }
   .risk-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     max-height: 44vh;
     overflow-y: auto;
   }
