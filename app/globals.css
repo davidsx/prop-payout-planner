@@ -1359,24 +1359,32 @@ tfoot td {
   .controls .field input[type="date"]::-webkit-datetime-edit {
     padding: 0;
   }
-  /* Swap the month grid for the vertical agenda. */
-  .cal-grid {
+  /* Show the month grid on phones too (the agenda list stays hidden). Compact
+     the cells so a full week of columns fits the screen. */
+  .cell {
+    min-height: 58px;
+    padding: 4px 5px;
+    gap: 2px;
+  }
+  .cell .daynum {
+    font-size: 11px;
+  }
+  .cell .idx {
+    font-size: 9px;
+  }
+  .cell .target {
+    font-size: 11px;
+  }
+  .cell .target .tlabel {
     display: none;
   }
-  .agenda {
-    display: flex;
+  .cell .dot {
+    width: 6px;
+    height: 6px;
   }
-  /* …but show the grid (and hide the agenda) while marking holidays, so the
-     whole month is tappable on phones too. */
-  .cal-holiday-edit .cal-grid {
-    display: grid;
-  }
-  .cal-holiday-edit .agenda {
-    display: none;
-  }
-  .cal-holiday-edit .cell {
-    min-height: 62px;
-    font-size: 12px;
+  .payout-pill {
+    font-size: 10px;
+    padding: 1px 4px;
   }
   /* Detail table can scroll sideways rather than overflow the viewport. */
   .daylist {
