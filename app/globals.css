@@ -138,32 +138,44 @@ select {
   font-size: 12.5px;
   color: var(--text-dim);
 }
+.risk-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
 .risk-item {
   display: flex;
-  align-items: baseline;
-  gap: 8px 12px;
-  flex-wrap: wrap;
-  padding: 8px 0;
-  border-top: 1px solid color-mix(in srgb, var(--danger) 18%, var(--border-soft));
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-elev-2));
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
   font-variant-numeric: tabular-nums;
 }
+.risk-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
 .risk-acct {
-  flex: 1;
-  min-width: 130px;
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: 13px;
+  min-width: 0;
 }
 .risk-date {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-faint);
+  white-space: nowrap;
 }
 .risk-amt {
   font-weight: 800;
-  font-size: 14px;
+  font-size: 19px;
   color: var(--danger);
 }
 .risk-base {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-faint);
 }
 

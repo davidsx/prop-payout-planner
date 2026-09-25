@@ -519,21 +519,25 @@ export default function Home() {
                 loss of 2× or more the base hit
               </span>
             </div>
-            {lossBreaches.map((b) => (
-              <div className="risk-item" key={b.key}>
-                <span className="risk-acct">
-                  {b.firm} <span className="muted">{b.size}</span>
-                </span>
-                <span className="risk-date">
-                  {fromISO(b.iso).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-                <span className="risk-amt">{money(b.actual)}</span>
-                <span className="risk-base">vs base {money(b.target)}</span>
-              </div>
-            ))}
+            <div className="risk-list">
+              {lossBreaches.map((b) => (
+                <div className="risk-item" key={b.key}>
+                  <div className="risk-item-head">
+                    <span className="risk-acct">
+                      {b.firm} <span className="muted">{b.size}</span>
+                    </span>
+                    <span className="risk-date">
+                      {fromISO(b.iso).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <div className="risk-amt">{money(b.actual)}</div>
+                  <div className="risk-base">vs base {money(b.target)}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
