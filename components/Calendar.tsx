@@ -33,6 +33,8 @@ interface Props {
   tradingDayMode: TradingDayMode;
   todayISO: string;
   actuals?: Record<string, number>;
+  holidays?: Record<string, true>;
+  onToggleHoliday?: (iso: string) => void;
 }
 
 export default function Calendar({
@@ -41,6 +43,8 @@ export default function Calendar({
   tradingDayMode,
   todayISO,
   actuals,
+  holidays,
+  onToggleHoliday,
 }: Props) {
   const start = fromISO(startISO);
   const [view, setView] = useState(() => ({
@@ -48,6 +52,8 @@ export default function Calendar({
     month: start.getMonth(),
   }));
   const [selected, setSelected] = useState<string | null>(null);
+  const [holidayMode, setHolidayMode] = useState(false);
+  const hol = useMemo(() => new Set(Object.keys(holidays || {})), [holidays]);
 
   const columns = useMemo(() => visibleWeekdays(tradingDayMode), [tradingDayMode]);
   const colOf = (weekday: number) => columns.indexOf(weekday);
@@ -119,7 +125,7 @@ export default function Calendar({
   };
 
   return (
-    <div>
+    <div className={holidayMode ? "cal-holiday-edit" : undefined}>
       <div className="section-head">
         <div className="cal-nav">
           <button className="btn" onClick={() => step(-1)} aria-label="Previous month">
@@ -139,8 +145,23 @@ export default function Calendar({
           >
             Jump to start
           </button>
+          {onToggleHoliday && (
+            <button
+              className={`btn${holidayMode ? " primary" : ""}`}
+              onClick={() => setHolidayMode((v) => !v)}
+              title="Mark days you won't trade — the plan skips them"
+            >
+              🏖 {holidayMode ? "Done" : "Holidays"}
+            </button>
+          )}
         </div>
       </div>
+      {holidayMode && (
+        <p className="hint" style={{ marginTop: -4, marginBottom: 10 }}>
+          Tap any day to toggle it as a holiday (skipped — the plan shifts to the next
+          trading day). Tap “Done” when finished.
+        </p>
+      )}
 
       <div
         className="calendar cal-grid"
@@ -155,20 +176,25 @@ export default function Calendar({
           if (!date) return <div key={i} className="cell empty" />;
           const iso = toISO(date);
           const info = schedule.byIso.get(iso);
-          const trading = isTradingDay(date, tradingDayMode);
+          const isHoliday = hol.has(iso);
+          const trading = isTradingDay(date, tradingDayMode, hol);
           const status = statusOf(info);
           const classes = ["cell"];
           if (!trading) classes.push("off");
+          if (isHoliday) classes.push("holiday");
           if (iso === todayISO) classes.push("today");
           if (info && info.payoutTotal > 0) classes.push("has-payout");
           if (status) classes.push(`hit-${status}`);
+          const clickable = holidayMode || !!info;
 
           return (
             <div
               key={i}
               className={classes.join(" ")}
-              onClick={() => info && setSelected(iso)}
-              style={{ cursor: info ? "pointer" : "default" }}
+              onClick={() =>
+                holidayMode ? onToggleHoliday?.(iso) : info && setSelected(iso)
+              }
+              style={{ cursor: clickable ? "pointer" : "default" }}
             >
               <div className="daynum">
                 <span className="dn-left">
@@ -177,8 +203,13 @@ export default function Calendar({
                     <span className={`hit-glyph ${status}`}>{GLYPH[status]}</span>
                   )}
                 </span>
-                {info && <span className="idx">D{info.tradingDayIndex + 1}</span>}
+                {isHoliday ? (
+                  <span className="idx">Holiday</span>
+                ) : (
+                  info && <span className="idx">D{info.tradingDayIndex + 1}</span>
+                )}
               </div>
+              {isHoliday && <div className="cell-holiday">🏖 Holiday</div>}
 
               {info && info.dailyTargetTotal > 0 && (
                 <div className="target">

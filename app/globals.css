@@ -654,6 +654,21 @@ tfoot td {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
+.cell.holiday {
+  background: color-mix(in srgb, var(--blue) 12%, var(--bg-elev));
+  border-color: color-mix(in srgb, var(--blue) 45%, var(--border));
+  opacity: 1;
+}
+.cell-holiday {
+  margin-top: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue);
+}
+/* In holiday-edit mode make it obvious the whole grid is tappable. */
+.cal-holiday-edit .cell {
+  cursor: pointer;
+}
 .cell.has-payout {
   border-color: var(--gold);
 }
@@ -1350,6 +1365,18 @@ tfoot td {
   }
   .agenda {
     display: flex;
+  }
+  /* …but show the grid (and hide the agenda) while marking holidays, so the
+     whole month is tappable on phones too. */
+  .cal-holiday-edit .cal-grid {
+    display: grid;
+  }
+  .cal-holiday-edit .agenda {
+    display: none;
+  }
+  .cal-holiday-edit .cell {
+    min-height: 62px;
+    font-size: 12px;
   }
   /* Detail table can scroll sideways rather than overflow the viewport. */
   .daylist {

@@ -61,6 +61,12 @@ export interface PlannerState {
    * hit or miss — it just pushes the cycle later.
    */
   rests?: Record<string, true>;
+  /**
+   * Days to skip trading entirely (market/personal holidays), keyed by ISO
+   * date. A holiday is removed from the trading calendar for ALL accounts, so
+   * the whole plan shifts to the next real trading day.
+   */
+  holidays?: Record<string, true>;
 }
 
 /** hit = actual met/exceeded target, miss = below, pending = not recorded. */
@@ -177,7 +183,12 @@ export function fromISO(iso: string): Date {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
-export function isTradingDay(d: Date, mode: TradingDayMode): boolean {
+export function isTradingDay(
+  d: Date,
+  mode: TradingDayMode,
+  holidays?: Set<string>,
+): boolean {
+  if (holidays && holidays.has(toISO(d))) return false; // marked non-trading
   const g = d.getDay(); // 0 = Sun ... 6 = Sat
   if (mode === "all") return true;
   if (mode === "sunfri") return g !== 6;
@@ -185,21 +196,26 @@ export function isTradingDay(d: Date, mode: TradingDayMode): boolean {
 }
 
 /** Advance `d` to the next trading day (inclusive of `d` itself if valid). */
-function ensureTradingDay(d: Date, mode: TradingDayMode): Date {
+function ensureTradingDay(d: Date, mode: TradingDayMode, holidays?: Set<string>): Date {
   const out = new Date(d);
-  while (!isTradingDay(out, mode)) out.setDate(out.getDate() + 1);
+  while (!isTradingDay(out, mode, holidays)) out.setDate(out.getDate() + 1);
   return out;
 }
 
 /** Number of trading days from `startISO` up to and including `iso` (1-based); 0 if before. */
-export function tradingOrdinal(startISO: string, iso: string, mode: TradingDayMode): number {
-  const start = ensureTradingDay(fromISO(startISO), mode);
+export function tradingOrdinal(
+  startISO: string,
+  iso: string,
+  mode: TradingDayMode,
+  holidays?: Set<string>,
+): number {
+  const start = ensureTradingDay(fromISO(startISO), mode, holidays);
   const target = fromISO(iso);
   if (target < start) return 0;
   let count = 0;
   const cur = new Date(start);
   while (toISO(cur) <= iso) {
-    if (isTradingDay(cur, mode)) count += 1;
+    if (isTradingDay(cur, mode, holidays)) count += 1;
     if (toISO(cur) === iso) break;
     cur.setDate(cur.getDate() + 1);
   }
@@ -207,17 +223,27 @@ export function tradingOrdinal(startISO: string, iso: string, mode: TradingDayMo
 }
 
 /** Generate `n` trading-day ISO dates starting at (or after) startDate. */
-export function tradingDates(startISO: string, n: number, mode: TradingDayMode): string[] {
+export function tradingDates(
+  startISO: string,
+  n: number,
+  mode: TradingDayMode,
+  holidays?: Set<string>,
+): string[] {
   const dates: string[] = [];
-  let cur = ensureTradingDay(fromISO(startISO), mode);
+  let cur = ensureTradingDay(fromISO(startISO), mode, holidays);
   while (dates.length < n) {
     dates.push(toISO(cur));
     do {
       cur = new Date(cur);
       cur.setDate(cur.getDate() + 1);
-    } while (!isTradingDay(cur, mode));
+    } while (!isTradingDay(cur, mode, holidays));
   }
   return dates;
+}
+
+/** Build a fast lookup set from the plan's holidays map. */
+export function holidaySet(rec?: Record<string, true>): Set<string> {
+  return new Set(Object.keys(rec || {}));
 }
 
 // ---------------------------------------------------------------------------
@@ -346,6 +372,7 @@ export function buildSchedule(state: PlannerState, focusId?: string | null): Sch
 
   let grandTakeHome = 0;
   let horizon = 0;
+  const holidays = holidaySet(state.holidays);
   // Earliest start across the accounts in view — used for global "Day N" labels.
   let earliestStart = state.startDate;
   for (const a of accounts) {
@@ -358,7 +385,7 @@ export function buildSchedule(state: PlannerState, focusId?: string | null): Sch
     horizon = Math.max(horizon, total);
     const startISO = a.startDate || state.startDate;
     // +1 day so the final payout (which lands the day after the last target) fits.
-    const isoList = tradingDates(startISO, Math.max(total + 1, 1), state.tradingDayMode);
+    const isoList = tradingDates(startISO, Math.max(total + 1, 1), state.tradingDayMode, holidays);
 
     for (let i = 0; i < total; i++) {
       const phase = phaseAtIndex(a, i);
@@ -405,7 +432,7 @@ export function buildSchedule(state: PlannerState, focusId?: string | null): Sch
   for (const d of days) {
     d.tradingDayIndex = Math.max(
       0,
-      tradingOrdinal(earliestStart, d.iso, state.tradingDayMode) - 1,
+      tradingOrdinal(earliestStart, d.iso, state.tradingDayMode, holidays) - 1,
     );
   }
 
@@ -449,6 +476,7 @@ export function buildLiveSchedule(
 
   let grandTakeHome = 0;
   let horizon = 0;
+  const holidays = holidaySet(state.holidays);
   let earliestStart = state.startDate;
   for (const a of accounts) {
     const s = a.startDate || state.startDate;
@@ -460,7 +488,7 @@ export function buildLiveSchedule(
     const each = a.payout * a.rate * a.count;
     const startISO = a.startDate || state.startDate;
     const maxDays = Math.max(1, accountTotalDays(a) + 200);
-    const isoList = tradingDates(startISO, maxDays, state.tradingDayMode);
+    const isoList = tradingDates(startISO, maxDays, state.tradingDayMode, holidays);
 
     let si = 0;
     let acc = 0;
@@ -526,7 +554,7 @@ export function buildLiveSchedule(
   for (const d of days) {
     d.tradingDayIndex = Math.max(
       0,
-      tradingOrdinal(earliestStart, d.iso, state.tradingDayMode) - 1,
+      tradingOrdinal(earliestStart, d.iso, state.tradingDayMode, holidays) - 1,
     );
   }
 
@@ -781,12 +809,13 @@ export function liveProjection(
   todayISO: string,
   rests?: Record<string, true>,
 ): AccountLive[] {
+  const holidays = holidaySet(state.holidays);
   return state.accounts.map((a) => {
     const steps = liveSteps(a);
     const totalPayouts = steps.filter((s) => s.payout).length;
     const start = a.startDate || state.startDate;
     const horizon = Math.max(1, accountTotalDays(a) + 150);
-    const isoList = tradingDates(start, horizon, state.tradingDayMode);
+    const isoList = tradingDates(start, horizon, state.tradingDayMode, holidays);
 
     const live = walkAccount(a, steps, isoList, actuals, rests, todayISO);
     const plan = walkAccount(a, steps, isoList, undefined, undefined, todayISO);

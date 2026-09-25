@@ -513,6 +513,15 @@ export default function Home() {
       return { ...s, rests, actuals };
     });
 
+  // Toggle a whole day as a holiday (skipped for all accounts).
+  const toggleHoliday = (iso: string) =>
+    setState((s) => {
+      const holidays = { ...(s.holidays || {}) };
+      if (holidays[iso]) delete holidays[iso];
+      else holidays[iso] = true;
+      return { ...s, holidays };
+    });
+
   const reset = () => {
     if (confirm("Reset all accounts to the sample data?")) {
       setState({
@@ -905,6 +914,8 @@ export default function Home() {
           tradingDayMode={state.tradingDayMode}
           todayISO={today}
           actuals={state.actuals}
+          holidays={state.holidays}
+          onToggleHoliday={toggleHoliday}
         />
       </section>
 
