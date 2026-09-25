@@ -540,34 +540,32 @@ export default function Home() {
     <div className="wrap">
       {lossBreaches.length > 0 && (
         <div className={`risk-banner ${worstLoss}`} role="alert">
-          <div className="risk-chip">⚠</div>
-          <div className="risk-body">
-            <div className="risk-head">
-              <span className="risk-title">
-                {worstLoss === "red" ? "Heavy loss alert" : "Loss warning"}
-              </span>
-              {breachDateLabel && <span className="risk-when">{breachDateLabel}</span>}
-              <span className="risk-caption">
-                {[
-                  redLosses ? `${redLosses} over 2×` : "",
-                  yellowLosses ? `${yellowLosses} over 1×` : "",
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}{" "}
-                the base hit
-              </span>
-            </div>
-            <div className="risk-list">
-              {lossBreaches.map((b) => (
-                <div className={`risk-item ${b.level}`} key={b.key}>
-                  <span className="risk-acct">
-                    {b.firm} <span className="muted">{b.size}</span>
-                  </span>
-                  <div className="risk-amt">{money(b.actual)}</div>
-                  <div className="risk-base">vs base {money(b.target)}</div>
-                </div>
-              ))}
-            </div>
+          <div className="risk-head">
+            <span className="risk-chip">⚠</span>
+            <span className="risk-title">
+              {worstLoss === "red" ? "Heavy loss alert" : "Loss warning"}
+            </span>
+            {breachDateLabel && <span className="risk-when">{breachDateLabel}</span>}
+            <span className="risk-caption">
+              {[
+                redLosses ? `${redLosses} over 2×` : "",
+                yellowLosses ? `${yellowLosses} over 1×` : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}{" "}
+              the base hit
+            </span>
+          </div>
+          <div className="risk-list">
+            {lossBreaches.map((b) => (
+              <div className={`risk-item ${b.level}`} key={b.key}>
+                <span className="risk-acct">
+                  {b.firm} <span className="muted">{b.size}</span>
+                </span>
+                <div className="risk-amt">{money(b.actual)}</div>
+                <div className="risk-base">vs base {money(b.target)}</div>
+              </div>
+            ))}
           </div>
         </div>
       )}
