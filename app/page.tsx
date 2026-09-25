@@ -428,28 +428,49 @@ export default function Home() {
     () => liveProjection(state, state.actuals, today, state.rests),
     [state, today],
   );
-  // Heavy-loss alert: any recorded day where the loss is ≥ 2× that day's base hit.
+  // Loss alerts: yellow when a day's loss exceeds the base hit, red when it's
+  // 2× or more the base hit.
   const lossBreaches = useMemo(() => {
     const rec = state.actuals || {};
-    const out: { key: string; iso: string; firm: string; size: string; actual: number; target: number }[] = [];
+    type Breach = {
+      key: string;
+      iso: string;
+      firm: string;
+      size: string;
+      actual: number;
+      target: number;
+      level: "red" | "yellow";
+    };
+    const out: Breach[] = [];
     for (const d of fullSchedule.days) {
       for (const e of d.entries) {
         if (e.rest || e.perAccountTarget <= 0) continue;
         const actual = rec[hitKey(d.iso, e.accountId)];
-        if (actual !== undefined && actual <= -2 * e.perAccountTarget) {
-          out.push({
-            key: hitKey(d.iso, e.accountId),
-            iso: d.iso,
-            firm: e.firm,
-            size: e.size,
-            actual,
-            target: e.perAccountTarget,
-          });
-        }
+        if (actual === undefined) continue;
+        let level: "red" | "yellow" | null = null;
+        if (actual <= -2 * e.perAccountTarget) level = "red";
+        else if (actual <= -e.perAccountTarget) level = "yellow";
+        if (!level) continue;
+        out.push({
+          key: hitKey(d.iso, e.accountId),
+          iso: d.iso,
+          firm: e.firm,
+          size: e.size,
+          actual,
+          target: e.perAccountTarget,
+          level,
+        });
       }
     }
+    // Red first, then most recent.
+    out.sort((a, b) =>
+      a.level === b.level ? (a.iso < b.iso ? 1 : -1) : a.level === "red" ? -1 : 1,
+    );
     return out;
   }, [fullSchedule, state.actuals]);
+  const worstLoss = lossBreaches.some((b) => b.level === "red") ? "red" : "yellow";
+  const redLosses = lossBreaches.filter((b) => b.level === "red").length;
+  const yellowLosses = lossBreaches.length - redLosses;
 
   const setAccounts = (accounts: Account[]) => setState((s) => ({ ...s, accounts }));
   const setStart = (startDate: string) => setState((s) => ({ ...s, startDate }));
@@ -509,19 +530,26 @@ export default function Home() {
   return (
     <div className="wrap">
       {lossBreaches.length > 0 && (
-        <div className="risk-banner" role="alert">
+        <div className={`risk-banner ${worstLoss}`} role="alert">
           <div className="risk-chip">⚠</div>
           <div className="risk-body">
             <div className="risk-head">
-              <span className="risk-title">Heavy loss alert</span>
+              <span className="risk-title">
+                {worstLoss === "red" ? "Heavy loss alert" : "Loss warning"}
+              </span>
               <span className="risk-caption">
-                {lossBreaches.length} day{lossBreaches.length === 1 ? "" : "s"} with a
-                loss of 2× or more the base hit
+                {[
+                  redLosses ? `${redLosses} over 2×` : "",
+                  yellowLosses ? `${yellowLosses} over 1×` : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}{" "}
+                the base hit
               </span>
             </div>
             <div className="risk-list">
               {lossBreaches.map((b) => (
-                <div className="risk-item" key={b.key}>
+                <div className={`risk-item ${b.level}`} key={b.key}>
                   <div className="risk-item-head">
                     <span className="risk-acct">
                       {b.firm} <span className="muted">{b.size}</span>
