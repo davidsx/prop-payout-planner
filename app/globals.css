@@ -97,8 +97,8 @@ select {
   margin-bottom: 22px;
   padding: 15px 18px;
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--risk) 13%, var(--bg-elev));
-  border: 1px solid color-mix(in srgb, var(--risk) 55%, var(--border));
+  background: color-mix(in srgb, var(--risk) 24%, var(--bg-elev));
+  border: 1px solid color-mix(in srgb, var(--risk) 65%, var(--border));
   box-shadow: 0 10px 34px color-mix(in srgb, var(--risk) 20%, transparent);
   animation: riskglow 2.4s ease-in-out infinite;
 }
