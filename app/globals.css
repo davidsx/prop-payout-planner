@@ -1309,6 +1309,15 @@ tfoot td {
   .title {
     font-size: 22px;
   }
+  /* Loss banner: don't pin (would fill the phone screen); cap the tile area. */
+  .risk-banner {
+    position: static;
+  }
+  .risk-list {
+    grid-template-columns: 1fr;
+    max-height: 44vh;
+    overflow-y: auto;
+  }
   /* Live projection: one card per row on phones. */
   .live-grid {
     grid-template-columns: 1fr;
