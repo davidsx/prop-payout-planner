@@ -85,6 +85,57 @@ select {
   padding: 28px 20px 80px;
 }
 
+/* ---- Heavy-loss risk banner (sticky, unmissable) ---- */
+.risk-banner {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 45%, transparent),
+    0 10px 30px color-mix(in srgb, var(--danger) 35%, transparent);
+  animation: riskpulse 1.3s ease-in-out infinite;
+}
+@keyframes riskpulse {
+  50% {
+    box-shadow: 0 0 0 9px color-mix(in srgb, var(--danger) 12%, transparent),
+      0 10px 30px color-mix(in srgb, var(--danger) 35%, transparent);
+  }
+}
+.risk-icon {
+  font-size: 24px;
+  line-height: 1.1;
+}
+.risk-body {
+  min-width: 0;
+}
+.risk-body > strong {
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+.risk-body ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.risk-body li {
+  margin-top: 2px;
+}
+.risk-size {
+  opacity: 0.85;
+}
+.risk-sub {
+  opacity: 0.8;
+  font-weight: 500;
+}
+
 /* ---- Header ---- */
 .header {
   display: flex;

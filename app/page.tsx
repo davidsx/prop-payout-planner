@@ -428,6 +428,28 @@ export default function Home() {
     () => liveProjection(state, state.actuals, today, state.rests),
     [state, today],
   );
+  // Heavy-loss alert: any recorded day where the loss is ≥ 2× that day's base hit.
+  const lossBreaches = useMemo(() => {
+    const rec = state.actuals || {};
+    const out: { key: string; iso: string; firm: string; size: string; actual: number; target: number }[] = [];
+    for (const d of fullSchedule.days) {
+      for (const e of d.entries) {
+        if (e.rest || e.perAccountTarget <= 0) continue;
+        const actual = rec[hitKey(d.iso, e.accountId)];
+        if (actual !== undefined && actual <= -2 * e.perAccountTarget) {
+          out.push({
+            key: hitKey(d.iso, e.accountId),
+            iso: d.iso,
+            firm: e.firm,
+            size: e.size,
+            actual,
+            target: e.perAccountTarget,
+          });
+        }
+      }
+    }
+    return out;
+  }, [fullSchedule, state.actuals]);
 
   const setAccounts = (accounts: Account[]) => setState((s) => ({ ...s, accounts }));
   const setStart = (startDate: string) => setState((s) => ({ ...s, startDate }));
@@ -486,6 +508,30 @@ export default function Home() {
 
   return (
     <div className="wrap">
+      {lossBreaches.length > 0 && (
+        <div className="risk-banner" role="alert">
+          <span className="risk-icon">⚠️</span>
+          <div className="risk-body">
+            <strong>
+              Heavy loss — {lossBreaches.length} day
+              {lossBreaches.length === 1 ? "" : "s"} over 2× the base hit
+            </strong>
+            <ul>
+              {lossBreaches.map((b) => (
+                <li key={b.key}>
+                  {b.firm} <span className="risk-size">{b.size}</span> ·{" "}
+                  {fromISO(b.iso).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  : <strong>{money(b.actual)}</strong>{" "}
+                  <span className="risk-sub">(base hit {money(b.target)})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
       <header className="header">
         <div>
           <h1 className="title">Prop Payout Planner</h1>
