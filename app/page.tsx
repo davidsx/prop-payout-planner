@@ -510,25 +510,30 @@ export default function Home() {
     <div className="wrap">
       {lossBreaches.length > 0 && (
         <div className="risk-banner" role="alert">
-          <span className="risk-icon">⚠️</span>
+          <div className="risk-chip">⚠</div>
           <div className="risk-body">
-            <strong>
-              Heavy loss — {lossBreaches.length} day
-              {lossBreaches.length === 1 ? "" : "s"} over 2× the base hit
-            </strong>
-            <ul>
-              {lossBreaches.map((b) => (
-                <li key={b.key}>
-                  {b.firm} <span className="risk-size">{b.size}</span> ·{" "}
+            <div className="risk-head">
+              <span className="risk-title">Heavy loss alert</span>
+              <span className="risk-caption">
+                {lossBreaches.length} day{lossBreaches.length === 1 ? "" : "s"} with a
+                loss of 2× or more the base hit
+              </span>
+            </div>
+            {lossBreaches.map((b) => (
+              <div className="risk-item" key={b.key}>
+                <span className="risk-acct">
+                  {b.firm} <span className="muted">{b.size}</span>
+                </span>
+                <span className="risk-date">
                   {fromISO(b.iso).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                   })}
-                  : <strong>{money(b.actual)}</strong>{" "}
-                  <span className="risk-sub">(base hit {money(b.target)})</span>
-                </li>
-              ))}
-            </ul>
+                </span>
+                <span className="risk-amt">{money(b.actual)}</span>
+                <span className="risk-base">vs base {money(b.target)}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
