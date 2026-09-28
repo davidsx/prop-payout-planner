@@ -901,10 +901,12 @@ tfoot td {
   gap: 6px 10px;
   margin: 0 0 10px;
 }
-.live-pace {
+.live-days {
   margin-left: auto;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
+  color: var(--text-dim);
+  font-size: 12px;
 }
 .live-stats {
   display: grid;

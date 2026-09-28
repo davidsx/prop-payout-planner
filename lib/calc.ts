@@ -791,8 +791,9 @@ export interface AccountLive {
   remaining: number;
   pct: number; // 0..1 progress toward the current phase target
   paceDelta: number; // ahead(+)/behind(−) vs plan, for the current cycle only
-  nextPayoutPlanISO: string | null;
-  nextPayoutLiveISO: string | null;
+  daysToTarget: number | null; // trading days left to hit this target at base pace
+  nextTargetPlanISO: string | null;
+  nextTargetLiveISO: string | null;
   onTimeDailyNeeded: number | null; // $/day to hit next payout by its plan date
   finishPlanISO: string | null;
   finishLiveISO: string | null;
@@ -835,10 +836,20 @@ export function liveProjection(
     // logged over/under entering today, plus today's own over/under.
     const todayDelta = !done && todayActual !== undefined && cur ? todayActual - cur.pace : 0;
     const paceDelta = done ? 0 : live.snapDelta + todayDelta;
+    // Trading days left to reach this phase's target at the base-hit pace.
+    const daysToTarget = cur && cur.pace > 0 ? Math.ceil(remaining / cur.pace) : null;
     const payoutNo = Math.min(totalPayouts, steps.slice(0, live.snapStep + 1).filter((s) => s.payout).length || 1);
 
     const nextPayoutLiveISO = live.payouts.find((d) => d > todayISO) ?? null;
     const nextPayoutPlanISO = plan.payouts.find((d) => d > todayISO) ?? null;
+    // The target is hit the trading day BEFORE its payout lands.
+    const targetFromPayout = (payoutISO: string | null) => {
+      if (!payoutISO) return null;
+      const i = isoList.indexOf(payoutISO);
+      return i > 0 ? isoList[i - 1] : payoutISO;
+    };
+    const nextTargetLiveISO = targetFromPayout(nextPayoutLiveISO);
+    const nextTargetPlanISO = targetFromPayout(nextPayoutPlanISO);
 
     // Days from tomorrow through the plan's next payout (inclusive), on the
     // account's own trading calendar — used for the on-time daily figure.
@@ -863,8 +874,9 @@ export function liveProjection(
       remaining,
       pct,
       paceDelta,
-      nextPayoutPlanISO,
-      nextPayoutLiveISO,
+      daysToTarget,
+      nextTargetPlanISO,
+      nextTargetLiveISO,
       onTimeDailyNeeded,
       finishPlanISO: plan.finish,
       finishLiveISO: live.finish,

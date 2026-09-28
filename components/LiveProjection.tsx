@@ -23,7 +23,6 @@ export default function LiveProjection({ live }: Props) {
   return (
     <div className="live-grid">
       {live.map((a) => {
-        const behind = a.paceDelta < 0;
         return (
           <div className={`live-card${a.done ? " done" : ""}`} key={a.accountId}>
             <div className="live-head">
@@ -60,10 +59,11 @@ export default function LiveProjection({ live }: Props) {
                 <div className="live-line">
                   <strong>{money(a.earnedInPhase)}</strong> / {money(a.phaseTarget)}{" "}
                   <span className="muted">({money(a.remaining)} left)</span>
-                  <span className={`live-pace ${behind ? "down" : "up"}`}>
-                    {behind ? "▼" : "▲"} {money(Math.abs(a.paceDelta))}{" "}
-                    {behind ? "behind" : "ahead"}
-                  </span>
+                  {a.daysToTarget !== null && (
+                    <span className="live-days">
+                      {a.daysToTarget} day{a.daysToTarget === 1 ? "" : "s"} to target
+                    </span>
+                  )}
                 </div>
 
                 <dl className="live-stats">
@@ -78,11 +78,11 @@ export default function LiveProjection({ live }: Props) {
                     </dd>
                   </div>
                   <div>
-                    <dt>Next payout</dt>
+                    <dt>Next target</dt>
                     <dd>
-                      {fmt(a.nextPayoutLiveISO)}
-                      {shiftNote(a.nextPayoutLiveISO, a.nextPayoutPlanISO) && (
-                        <span className="muted"> · plan {fmt(a.nextPayoutPlanISO)}</span>
+                      {fmt(a.nextTargetLiveISO)}
+                      {shiftNote(a.nextTargetLiveISO, a.nextTargetPlanISO) && (
+                        <span className="muted"> · plan {fmt(a.nextTargetPlanISO)}</span>
                       )}
                     </dd>
                   </div>
