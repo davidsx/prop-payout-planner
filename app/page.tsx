@@ -428,8 +428,8 @@ export default function Home() {
     () => liveProjection(state, state.actuals, today, state.rests),
     [state, today],
   );
-  // Loss alerts: yellow when a day's loss exceeds the base hit, red when it's
-  // 2× or more the base hit.
+  // Loss alerts for TODAY only (a new trading day clears the alert): yellow
+  // when today's loss exceeds the base hit, red when it's 2× or more.
   const lossBreaches = useMemo(() => {
     const rec = state.actuals || {};
     type Breach = {
@@ -442,18 +442,19 @@ export default function Home() {
       level: "red" | "yellow";
     };
     const out: Breach[] = [];
-    for (const d of fullSchedule.days) {
-      for (const e of d.entries) {
+    const day = fullSchedule.byIso.get(today);
+    if (day) {
+      for (const e of day.entries) {
         if (e.rest || e.perAccountTarget <= 0) continue;
-        const actual = rec[hitKey(d.iso, e.accountId)];
+        const actual = rec[hitKey(today, e.accountId)];
         if (actual === undefined) continue;
         let level: "red" | "yellow" | null = null;
         if (actual <= -2 * e.perAccountTarget) level = "red";
         else if (actual <= -e.perAccountTarget) level = "yellow";
         if (!level) continue;
         out.push({
-          key: hitKey(d.iso, e.accountId),
-          iso: d.iso,
+          key: hitKey(today, e.accountId),
+          iso: today,
           firm: e.firm,
           size: e.size,
           actual,
@@ -462,12 +463,10 @@ export default function Home() {
         });
       }
     }
-    // Red first, then most recent.
-    out.sort((a, b) =>
-      a.level === b.level ? (a.iso < b.iso ? 1 : -1) : a.level === "red" ? -1 : 1,
-    );
+    // Red first.
+    out.sort((a, b) => (a.level === b.level ? 0 : a.level === "red" ? -1 : 1));
     return out;
-  }, [fullSchedule, state.actuals]);
+  }, [fullSchedule, state.actuals, today]);
   const worstLoss = lossBreaches.some((b) => b.level === "red") ? "red" : "yellow";
   const redLosses = lossBreaches.filter((b) => b.level === "red").length;
   const yellowLosses = lossBreaches.length - redLosses;
