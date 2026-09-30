@@ -9,6 +9,7 @@ import MonthlySummary from "@/components/MonthlySummary";
 import TodayHits from "@/components/TodayHits";
 import {
   Account,
+  AccountLive,
   PlannerState,
   TradingDayMode,
   VersionMeta,
@@ -103,6 +104,7 @@ export default function Home() {
   const [accountsLocked, setAccountsLocked] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [liveMode, setLiveMode] = useState(true);
+  const [celebrate, setCelebrate] = useState<string | null>(null);
   const [state, setState] = useState<PlannerState>({
     startDate: todayISO(),
     tradingDayMode: "weekdays",
@@ -396,6 +398,13 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, space]);
 
+  // Auto-dismiss the "target reached" celebration.
+  useEffect(() => {
+    if (!celebrate) return;
+    const t = setTimeout(() => setCelebrate(null), 4000);
+    return () => clearTimeout(t);
+  }, [celebrate]);
+
   // Full plan (all accounts) drives the top stat cards. In Live mode it is
   // re-paced from the recorded actuals.
   const fullSchedule = useMemo(
@@ -484,7 +493,28 @@ export default function Home() {
   const setStart = (startDate: string) => setState((s) => ({ ...s, startDate }));
   const setMode = (tradingDayMode: TradingDayMode) =>
     setState((s) => ({ ...s, tradingDayMode }));
-  const setActual = (iso: string, accountId: string, value: number | null) =>
+  const setActual = (iso: string, accountId: string, value: number | null) => {
+    // Detect a target reached BY this edit (crossed from below to met) today.
+    let reached: AccountLive | null = null;
+    if (iso === today && value !== null && !Number.isNaN(value)) {
+      const before = liveProjection(state, state.actuals, today, state.rests).find(
+        (x) => x.accountId === accountId,
+      );
+      if (before && !before.done && before.pct < 1) {
+        const k = hitKey(iso, accountId);
+        const nextActuals = { ...(state.actuals || {}), [k]: value };
+        const nextRests = { ...(state.rests || {}) };
+        delete nextRests[k];
+        const after = liveProjection(
+          { ...state, actuals: nextActuals, rests: nextRests },
+          nextActuals,
+          today,
+          nextRests,
+        ).find((x) => x.accountId === accountId);
+        if (after && after.pct >= 1) reached = after;
+      }
+    }
+
     setState((s) => {
       const actuals = { ...(s.actuals || {}) };
       const rests = { ...(s.rests || {}) };
@@ -496,6 +526,11 @@ export default function Home() {
       }
       return { ...s, actuals, rests };
     });
+
+    if (reached) {
+      setCelebrate(`🎯 ${reached.firm} ${reached.size} — ${reached.phaseLabel} reached!`);
+    }
+  };
 
   // Toggle a day as "rest / not tradable" (e.g. payout processing).
   const toggleRest = (iso: string, accountId: string) =>
@@ -546,6 +581,11 @@ export default function Home() {
 
   return (
     <div className="wrap">
+      {celebrate && (
+        <div className="celebrate-toast" role="status" onClick={() => setCelebrate(null)}>
+          {celebrate}
+        </div>
+      )}
       {lossBreaches.length > 0 && (
         <div className={`risk-banner ${worstLoss}`} role="alert">
           <div className="risk-head">
