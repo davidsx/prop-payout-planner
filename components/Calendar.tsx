@@ -35,6 +35,7 @@ interface Props {
   actuals?: Record<string, number>;
   holidays?: Record<string, true>;
   onToggleHoliday?: (iso: string) => void;
+  focusId?: string | null; // when focused on one account, show its logged P&L
 }
 
 export default function Calendar({
@@ -45,6 +46,7 @@ export default function Calendar({
   actuals,
   holidays,
   onToggleHoliday,
+  focusId,
 }: Props) {
   const start = fromISO(startISO);
   const [view, setView] = useState(() => ({
@@ -233,6 +235,21 @@ export default function Calendar({
                   )}
                 </div>
               )}
+
+              {focusId &&
+                info &&
+                (() => {
+                  const pnl = actuals?.[hitKey(iso, focusId)];
+                  if (pnl === undefined) return null;
+                  const e = info.entries[0];
+                  const r = e ? resultOf(pnl, e.perAccountTarget, e.minDay) : "pending";
+                  return (
+                    <div className={`cell-pnl ${r}`}>
+                      <span className="tlabel">P&amp;L</span>
+                      {money(pnl)}
+                    </div>
+                  );
+                })()}
 
               {info && (info.entries.length > 0 || info.payoutTotal > 0) && (
                 <div className="cell-foot">

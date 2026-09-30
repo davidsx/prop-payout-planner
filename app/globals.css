@@ -1152,6 +1152,29 @@ tfoot td {
   letter-spacing: 0.04em;
   display: block;
 }
+/* Logged P&L shown in a focused account's calendar cells */
+.cell-pnl {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cell-pnl .tlabel {
+  font-size: 9px;
+  color: var(--text-faint);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+}
+.cell-pnl.hit {
+  color: var(--accent-text);
+}
+.cell-pnl.partial {
+  color: var(--blue);
+}
+.cell-pnl.miss {
+  color: var(--danger);
+}
 .cell-foot {
   margin-top: auto;
   display: flex;

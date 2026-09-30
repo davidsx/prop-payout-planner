@@ -955,6 +955,7 @@ export default function Home() {
           actuals={state.actuals}
           holidays={state.holidays}
           onToggleHoliday={toggleHoliday}
+          focusId={activeFocus}
         />
       </section>
 
