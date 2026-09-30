@@ -98,6 +98,21 @@ export default function AccountEditor({
 
   const remove = (id: string) => onChange(accounts.filter((a) => a.id !== id));
 
+  // Duplicate a row (fresh id, deep-copied phases) right after the original.
+  const duplicate = (id: string) => {
+    const idx = accounts.findIndex((a) => a.id === id);
+    if (idx < 0) return;
+    const a = accounts[idx];
+    const copy: Account = {
+      ...a,
+      id: newId(),
+      eval: { ...a.eval },
+      first: { ...a.first },
+      remaining: { ...a.remaining },
+    };
+    onChange([...accounts.slice(0, idx + 1), copy, ...accounts.slice(idx + 1)]);
+  };
+
   const grandPerPayout = accounts.reduce((s, a) => s + payoutTakeHome(a), 0);
   const grandTotal = accounts.reduce((s, a) => s + accountTakeHome(a), 0);
 
@@ -263,13 +278,22 @@ export default function AccountEditor({
 
               <td className="muted">{accountTotalDays(a)}</td>
               <td>
-                <button
-                  className="btn icon"
-                  title="Remove row"
-                  onClick={() => remove(a.id)}
-                >
-                  ✕
-                </button>
+                <div className="row-actions">
+                  <button
+                    className="btn icon dup"
+                    title="Duplicate this account"
+                    onClick={() => duplicate(a.id)}
+                  >
+                    ❐
+                  </button>
+                  <button
+                    className="btn icon"
+                    title="Remove row"
+                    onClick={() => remove(a.id)}
+                  >
+                    ✕
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

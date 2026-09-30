@@ -484,6 +484,14 @@ select {
   color: var(--danger);
   border-color: var(--danger);
 }
+.btn.icon.dup:hover {
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.row-actions {
+  display: flex;
+  gap: 5px;
+}
 
 /* ---- Editor table ---- */
 .table-scroll {
