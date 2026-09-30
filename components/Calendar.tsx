@@ -100,27 +100,37 @@ export default function Calendar({
 
   const payoutLabel = (d: DaySchedule) => money(d.payoutTotal);
 
-  // Aggregate across the day's active accounts: "miss" if any account missed,
-  // "hit" if all hit, "pending" otherwise. null for future/target-less days.
-  type DayStatus = "hit" | "miss" | "pending";
-  const GLYPH: Record<DayStatus, string> = { hit: "✅", miss: "❌", pending: "○" };
+  // Aggregate across the day's active accounts: miss if any missed, hit if all
+  // hit, partial if all logged with at least min-day profit, else pending.
+  // null for future/target-less days.
+  type DayStatus = "hit" | "partial" | "miss" | "pending";
+  const GLYPH: Record<DayStatus, string> = {
+    hit: "✅",
+    partial: "🔵",
+    miss: "❌",
+    pending: "○",
+  };
   const statusOf = (info: DaySchedule | undefined): DayStatus | null => {
     // Only completed days get a hit/miss/pending mark — the in-progress day
     // (todayISO) and future days don't, since the session isn't over.
     if (!info || info.dailyTargetTotal <= 0 || info.iso >= todayISO) return null;
     let hit = 0;
     let miss = 0;
+    let recorded = 0;
     let n = 0;
     for (const e of info.entries) {
       if (e.rest) continue; // rest days aren't a hit or miss
       n++;
-      const r = resultOf(actuals?.[hitKey(info.iso, e.accountId)], e.perAccountTarget);
+      const r = resultOf(actuals?.[hitKey(info.iso, e.accountId)], e.perAccountTarget, e.minDay);
+      if (r === "pending") continue;
+      recorded++;
       if (r === "hit") hit++;
       else if (r === "miss") miss++;
     }
     if (n === 0) return null;
     if (miss > 0) return "miss";
     if (hit === n) return "hit";
+    if (recorded === n) return "partial"; // all logged, profit but not all full hits
     return "pending";
   };
 

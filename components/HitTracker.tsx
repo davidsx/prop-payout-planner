@@ -43,7 +43,7 @@ export default function HitTracker({
     const rows = d.entries.map((e) => {
       const actual = e.rest ? undefined : rec[hitKey(d.iso, e.accountId)];
       const target = e.perAccountTarget;
-      const res = resultOf(actual, target);
+      const res = resultOf(actual, target, e.minDay);
       if (!e.rest) trackableCount++;
       if (actual !== undefined) {
         logged++;

@@ -667,6 +667,13 @@ tfoot td {
   border-color: color-mix(in srgb, var(--blue) 45%, var(--border));
   opacity: 1;
 }
+.cell.hit-partial {
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 9%, var(--bg-elev));
+}
+.hit-glyph.partial {
+  color: var(--blue);
+}
 .cell-holiday {
   margin-top: auto;
   font-size: 11px;
@@ -785,6 +792,9 @@ tfoot td {
 }
 .lg-row.hit {
   border-left-color: var(--accent);
+}
+.lg-row.partial {
+  border-left-color: var(--blue);
 }
 .lg-row.miss {
   border-left-color: var(--danger);
@@ -1040,6 +1050,10 @@ tfoot td {
 .th-card.under {
   background: color-mix(in srgb, var(--danger) 9%, var(--bg-elev));
   border-color: var(--danger);
+}
+.th-card.partial {
+  background: color-mix(in srgb, var(--blue) 10%, var(--bg-elev));
+  border-color: var(--blue);
 }
 .th-actual {
   display: flex;

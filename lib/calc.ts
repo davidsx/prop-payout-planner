@@ -69,21 +69,31 @@ export interface PlannerState {
   holidays?: Record<string, true>;
 }
 
-/** hit = actual met/exceeded target, miss = below, pending = not recorded. */
-export type DayResult = "hit" | "miss" | "pending";
+/**
+ * hit = met/exceeded the base target, partial = below base but at/above the
+ * min-day floor (still solid profit), miss = below the floor, pending = none.
+ */
+export type DayResult = "hit" | "partial" | "miss" | "pending";
 
 /** Storage key for one account's result on one day. */
 export function hitKey(iso: string, accountId: string): string {
   return `${iso}|${accountId}`;
 }
 
-/** Result for one account-day given the recorded actual and its base target. */
+/**
+ * Result for one account-day given the recorded actual, its base target and the
+ * min-day floor. `minDay` defaults to the target (no partial tier) for callers
+ * that don't have it.
+ */
 export function resultOf(
   actual: number | undefined,
   target: number,
+  minDay: number = target,
 ): DayResult {
   if (actual === undefined) return "pending";
-  return actual >= target ? "hit" : "miss";
+  if (actual >= target) return "hit";
+  if (actual >= minDay) return "partial";
+  return "miss";
 }
 
 /** Compact metadata for one saved version (used by the version manager). */
@@ -261,6 +271,8 @@ export interface DayAccountEntry {
   perAccountTarget: number;
   /** Combined daily target = perAccountTarget * count. */
   dailyTarget: number;
+  /** The account's min-day profit floor (for the partial/blue result tier). */
+  minDay: number;
   /** Rest day — account not tradable (e.g. payout processing). No target;
    *  contributes no progress and isn't counted as a hit/miss. */
   rest?: boolean;
@@ -408,6 +420,7 @@ export function buildSchedule(state: PlannerState, focusId?: string | null): Sch
         count: a.count,
         perAccountTarget: perAccount,
         dailyTarget: combined,
+        minDay: a.minDay,
       });
       day.dailyTargetTotal += combined;
     }
@@ -522,6 +535,7 @@ export function buildLiveSchedule(
           count: a.count,
           perAccountTarget: 0,
           dailyTarget: 0,
+          minDay: a.minDay,
           rest: true,
         });
         continue;
@@ -537,6 +551,7 @@ export function buildLiveSchedule(
         count: a.count,
         perAccountTarget: perAccount,
         dailyTarget: combined,
+        minDay: a.minDay,
       });
       day.dailyTargetTotal += combined;
 
@@ -656,7 +671,7 @@ export function hitSummary(
       // Actuals are recorded per single account (copy-traded), so compare to
       // the per-account base target, not the count-multiplied total.
       const actual = rec[hitKey(d.iso, e.accountId)];
-      const r = resultOf(actual, e.perAccountTarget);
+      const r = resultOf(actual, e.perAccountTarget, e.minDay);
       if (r === "pending") {
         pending++;
         continue;
@@ -666,10 +681,11 @@ export function hitSummary(
       if (r === "hit") {
         hit++;
         dh++;
-      } else {
+      } else if (r === "miss") {
         miss++;
         dm++;
       }
+      // "partial" (profit below base but at/above the floor) is neither.
     }
     dayStatus.push(n === 0 ? "none" : dm > 0 ? "miss" : dRec === 0 ? "none" : dh === n ? "hit" : "partial");
   }

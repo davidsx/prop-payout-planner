@@ -52,7 +52,7 @@ export default function TodayHits({
     const phase = entry?.phase ?? null;
     const perAcct = entry?.perAccountTarget ?? 0;
     const actual = active && !isRest ? rec[hitKey(todayISO, a.id)] : undefined;
-    const result = resultOf(actual, perAcct);
+    const result = resultOf(actual, perAcct, a.minDay);
     return { a, active, isRest, phase, perAcct, actual, result, dayNo: dayNo[a.id] ?? 0 };
   });
 
@@ -66,6 +66,7 @@ export default function TodayHits({
           const cls = ["th-card"];
           if (isRest) cls.push("rest");
           else if (result === "hit") cls.push("on");
+          else if (result === "partial") cls.push("partial");
           else if (result === "miss") cls.push("under");
           if (!active) cls.push("idle");
           return (
