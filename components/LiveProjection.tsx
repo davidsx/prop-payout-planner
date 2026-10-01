@@ -79,8 +79,7 @@ export default function LiveProjection({ live }: Props) {
                         <span className={`live-pace-pill ${pace}`}>{paceText}</span>
                       )}
                       {a.paceDelta !== 0 && (
-                        <span className="muted">
-                          {" "}
+                        <span className="live-diff">
                           {a.paceDelta >= 0 ? "+" : "−"}
                           {money(Math.abs(a.paceDelta))}
                         </span>
