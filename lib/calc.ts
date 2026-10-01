@@ -733,6 +733,7 @@ interface WalkResult {
   snapAcc: number; // profit accumulated toward that step as of today
   snapDelta: number; // (actual − pace) within the CURRENT cycle, entering today
   started: boolean;
+  stepStart: string[]; // ISO of the first trading day of each step
 }
 
 function walkAccount(
@@ -753,9 +754,16 @@ function walkAccount(
   let pending = 0; // payouts due the next trading day
   const payouts: string[] = [];
   let finish: string | null = null;
+  const stepStart: string[] = [];
+  let prevSi = -1;
 
   for (let p = 0; p < isoList.length && (si < steps.length || pending > 0); p++) {
     const iso = isoList[p];
+    // The first day a step becomes current is that step's start.
+    if (si !== prevSi) {
+      if (si < steps.length && stepStart[si] === undefined) stepStart[si] = iso;
+      prevSi = si;
+    }
     // A target hit on the previous day pays out today.
     while (pending > 0) {
       payouts.push(iso);
@@ -789,7 +797,7 @@ function walkAccount(
       snapDelta = cycleDelta;
     }
   }
-  return { payouts, finish, snapStep, snapAcc, snapDelta, started };
+  return { payouts, finish, snapStep, snapAcc, snapDelta, started, stepStart };
 }
 
 export interface AccountLive {
@@ -807,6 +815,7 @@ export interface AccountLive {
   remaining: number;
   pct: number; // 0..1 progress toward the current phase target
   paceDelta: number; // ahead(+)/behind(−) vs plan, for the current cycle only
+  dayInCycle: number; // trading days into the current cycle, through today (1-based)
   daysToTarget: number | null; // trading days left to hit this target at base pace
   nextTargetPlanISO: string | null;
   nextTargetLiveISO: string | null;
@@ -840,6 +849,11 @@ export function liveProjection(
     const done = live.snapStep >= steps.length;
     const cur = done ? null : steps[live.snapStep];
     const phaseTarget = cur ? cur.target : 0;
+    // Trading days into the current cycle, through today (inclusive).
+    const cycleStartISO = done ? null : live.stepStart[live.snapStep] ?? isoList[0];
+    const dayInCycle = cycleStartISO
+      ? isoList.filter((d) => d >= cycleStartISO && d <= todayISO).length
+      : 0;
     // Fold today's logged amount into the current phase's progress (the phase
     // doesn't advance off the in-progress day — see walkAccount). A rest day
     // today contributes nothing.
@@ -890,6 +904,7 @@ export function liveProjection(
       remaining,
       pct,
       paceDelta,
+      dayInCycle,
       daysToTarget,
       nextTargetPlanISO,
       nextTargetLiveISO,

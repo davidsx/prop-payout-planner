@@ -11,12 +11,6 @@ function fmt(iso: string | null): string {
   return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-/** Signed date shift in words, comparing live vs plan (both ISO). */
-function shiftNote(liveISO: string | null, planISO: string | null): string {
-  if (!liveISO || !planISO || liveISO === planISO) return "";
-  return liveISO < planISO ? "earlier" : "later";
-}
-
 export default function LiveProjection({ live }: Props) {
   if (live.length === 0) return <p className="hint">No accounts yet.</p>;
 
@@ -56,11 +50,8 @@ export default function LiveProjection({ live }: Props) {
             ) : a.done ? (
               <p className="live-line">
                 Finished {fmt(a.finishLiveISO)}
-                {shiftNote(a.finishLiveISO, a.finishPlanISO) && (
-                  <span className="muted">
-                    {" "}
-                    ({shiftNote(a.finishLiveISO, a.finishPlanISO)} than plan {fmt(a.finishPlanISO)})
-                  </span>
+                {a.finishPlanISO && (
+                  <span className="live-plan">plan {fmt(a.finishPlanISO)}</span>
                 )}
               </p>
             ) : (
@@ -74,11 +65,15 @@ export default function LiveProjection({ live }: Props) {
                 <div className="live-line">
                   <strong>{money(a.earnedInPhase)}</strong> / {money(a.phaseTarget)}{" "}
                   <span className="muted">({money(a.remaining)} left)</span>
-                  {a.daysToTarget !== null && (
-                    <span className="live-days">
-                      {a.daysToTarget} day{a.daysToTarget === 1 ? "" : "s"} to target
-                    </span>
-                  )}
+                  <span className="live-days">
+                    day {a.dayInCycle}
+                    {a.daysToTarget !== null && (
+                      <>
+                        {" · "}
+                        {a.daysToTarget} day{a.daysToTarget === 1 ? "" : "s"} to target
+                      </>
+                    )}
+                  </span>
                 </div>
 
                 <dl className="live-stats">
@@ -96,8 +91,8 @@ export default function LiveProjection({ live }: Props) {
                     <dt>Next target</dt>
                     <dd>
                       {fmt(a.nextTargetLiveISO)}
-                      {shiftNote(a.nextTargetLiveISO, a.nextTargetPlanISO) && (
-                        <span className="muted"> · plan {fmt(a.nextTargetPlanISO)}</span>
+                      {a.nextTargetPlanISO && (
+                        <span className="live-plan">plan {fmt(a.nextTargetPlanISO)}</span>
                       )}
                     </dd>
                   </div>
@@ -105,8 +100,8 @@ export default function LiveProjection({ live }: Props) {
                     <dt>Finish</dt>
                     <dd>
                       {fmt(a.finishLiveISO)}
-                      {shiftNote(a.finishLiveISO, a.finishPlanISO) && (
-                        <span className="muted"> · plan {fmt(a.finishPlanISO)}</span>
+                      {a.finishPlanISO && (
+                        <span className="live-plan">plan {fmt(a.finishPlanISO)}</span>
                       )}
                     </dd>
                   </div>

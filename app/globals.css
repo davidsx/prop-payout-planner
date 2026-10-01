@@ -976,6 +976,13 @@ tfoot td {
 .live-stats dd .muted {
   font-weight: 500;
 }
+/* The plan date sits on its own line under the live date. */
+.live-plan {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--text-faint);
+}
 /* Today-only cards on the home page */
 .today-hits {
   display: grid;
