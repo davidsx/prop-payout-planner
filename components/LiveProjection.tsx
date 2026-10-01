@@ -30,13 +30,8 @@ export default function LiveProjection({ live }: Props) {
         return (
           <div className={`live-card${a.done ? " done" : ""}`} key={a.accountId}>
             <div className="live-head">
-              <span className="live-head-left">
-                <span className="live-name">
-                  {a.firm} <span className="muted">{a.size}</span>
-                </span>
-                {pace && (
-                  <span className={`live-pace-pill ${pace}`}>{paceLabel[pace]}</span>
-                )}
+              <span className="live-name">
+                {a.firm} <span className="muted">{a.size}</span>
               </span>
               <span className="live-phase">
                 {a.done
@@ -74,7 +69,12 @@ export default function LiveProjection({ live }: Props) {
                 <dl className="live-stats">
                   <div>
                     <dt>Days in cycle</dt>
-                    <dd>{a.dayInCycle}</dd>
+                    <dd>
+                      {a.dayInCycle}
+                      {pace && (
+                        <span className={`live-pace-pill ${pace}`}>{paceLabel[pace]}</span>
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>Next target</dt>
