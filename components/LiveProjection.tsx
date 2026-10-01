@@ -69,27 +69,12 @@ export default function LiveProjection({ live }: Props) {
                 <div className="live-line">
                   <strong>{money(a.earnedInPhase)}</strong> / {money(a.phaseTarget)}{" "}
                   <span className="muted">({money(a.remaining)} left)</span>
-                  <span className="live-days">
-                    {a.dayInCycle}
-                    {a.daysToTarget !== null && (
-                      <>
-                        {" / "}
-                        {a.daysToTarget} day{a.daysToTarget === 1 ? "" : "s"} to target
-                      </>
-                    )}
-                  </span>
                 </div>
 
                 <dl className="live-stats">
                   <div>
-                    <dt>On-time pace</dt>
-                    <dd>
-                      {a.onTimeDailyNeeded === null
-                        ? "—"
-                        : a.onTimeDailyNeeded === Infinity
-                          ? "overdue"
-                          : `${money(a.onTimeDailyNeeded)}/day`}
-                    </dd>
+                    <dt>Days in cycle</dt>
+                    <dd>{a.dayInCycle}</dd>
                   </div>
                   <div>
                     <dt>Next target</dt>
