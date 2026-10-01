@@ -816,6 +816,7 @@ export interface AccountLive {
   pct: number; // 0..1 progress toward the current phase target
   baseHit: number; // the current phase's daily per-account base target
   paceDelta: number; // ahead(+)/behind(−) vs plan, for the current cycle only
+  paceDays: number; // trading days the target is behind(+)/ahead(−) of plan
   dayInCycle: number; // trading days into the current cycle, through today (1-based)
   daysToTarget: number | null; // trading days left to hit this target at base pace
   nextTargetPlanISO: string | null;
@@ -881,6 +882,10 @@ export function liveProjection(
     };
     const nextTargetLiveISO = targetFromPayout(nextPayoutLiveISO);
     const nextTargetPlanISO = targetFromPayout(nextPayoutPlanISO);
+    // Signed trading-day gap of the live target vs the plan: + = behind, − = ahead.
+    const liveIdx = nextTargetLiveISO ? isoList.indexOf(nextTargetLiveISO) : -1;
+    const planIdx = nextTargetPlanISO ? isoList.indexOf(nextTargetPlanISO) : -1;
+    const paceDays = liveIdx >= 0 && planIdx >= 0 ? liveIdx - planIdx : 0;
 
     // Days from tomorrow through the plan's next payout (inclusive), on the
     // account's own trading calendar — used for the on-time daily figure.
@@ -906,6 +911,7 @@ export function liveProjection(
       pct,
       baseHit: cur ? cur.pace : 0,
       paceDelta,
+      paceDays,
       dayInCycle,
       daysToTarget,
       nextTargetPlanISO,

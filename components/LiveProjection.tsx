@@ -21,12 +21,16 @@ export default function LiveProjection({ live }: Props) {
         const pace: "ahead" | "on" | "behind" | null =
           a.done || !a.nextTargetLiveISO || !a.nextTargetPlanISO
             ? null
-            : a.nextTargetLiveISO < a.nextTargetPlanISO
+            : a.paceDays < 0
               ? "ahead"
-              : a.nextTargetLiveISO > a.nextTargetPlanISO
+              : a.paceDays > 0
                 ? "behind"
                 : "on";
-        const paceLabel = { ahead: "Ahead", on: "On pace", behind: "Behind" };
+        const n = Math.abs(a.paceDays);
+        const paceText =
+          pace === "on"
+            ? "On pace"
+            : `${pace === "ahead" ? "Ahead" : "Behind"} ${n} day${n === 1 ? "" : "s"}`;
         return (
           <div className={`live-card${a.done ? " done" : ""}`} key={a.accountId}>
             <div className="live-head">
@@ -72,7 +76,7 @@ export default function LiveProjection({ live }: Props) {
                     <dd>
                       {a.dayInCycle}
                       {pace && (
-                        <span className={`live-pace-pill ${pace}`}>{paceLabel[pace]}</span>
+                        <span className={`live-pace-pill ${pace}`}>{paceText}</span>
                       )}
                     </dd>
                   </div>
