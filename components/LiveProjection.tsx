@@ -66,10 +66,10 @@ export default function LiveProjection({ live }: Props) {
                   <strong>{money(a.earnedInPhase)}</strong> / {money(a.phaseTarget)}{" "}
                   <span className="muted">({money(a.remaining)} left)</span>
                   <span className="live-days">
-                    day {a.dayInCycle}
+                    {a.dayInCycle}
                     {a.daysToTarget !== null && (
                       <>
-                        {" · "}
+                        {" / "}
                         {a.daysToTarget} day{a.daysToTarget === 1 ? "" : "s"} to target
                       </>
                     )}
