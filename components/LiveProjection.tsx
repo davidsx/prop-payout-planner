@@ -69,7 +69,6 @@ export default function LiveProjection({ live }: Props) {
                 <div className="live-line">
                   <strong>{money(a.earnedInPhase)}</strong> / {money(a.phaseTarget)}{" "}
                   <span className="muted">({money(a.remaining)} left)</span>
-                  <span className="live-days">base hit {money(a.baseHit)}</span>
                 </div>
 
                 <dl className="live-stats">
