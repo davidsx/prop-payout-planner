@@ -23,11 +23,26 @@ export default function LiveProjection({ live }: Props) {
   return (
     <div className="live-grid">
       {live.map((a) => {
+        // On pace if the projected target date is on/before the plan's.
+        const pace: "ahead" | "on" | "behind" | null =
+          a.done || !a.nextTargetLiveISO || !a.nextTargetPlanISO
+            ? null
+            : a.nextTargetLiveISO < a.nextTargetPlanISO
+              ? "ahead"
+              : a.nextTargetLiveISO > a.nextTargetPlanISO
+                ? "behind"
+                : "on";
+        const paceLabel = { ahead: "Ahead", on: "On pace", behind: "Behind" };
         return (
           <div className={`live-card${a.done ? " done" : ""}`} key={a.accountId}>
             <div className="live-head">
-              <span className="live-name">
-                {a.firm} <span className="muted">{a.size}</span>
+              <span className="live-head-left">
+                <span className="live-name">
+                  {a.firm} <span className="muted">{a.size}</span>
+                </span>
+                {pace && (
+                  <span className={`live-pace-pill ${pace}`}>{paceLabel[pace]}</span>
+                )}
               </span>
               <span className="live-phase">
                 {a.done

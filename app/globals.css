@@ -883,9 +883,34 @@ tfoot td {
   gap: 10px;
   margin-bottom: 9px;
 }
+.live-head-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
 .live-name {
   font-weight: 600;
   font-size: 14px;
+}
+.live-pace-pill {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.live-pace-pill.ahead,
+.live-pace-pill.on {
+  background: var(--accent-dim);
+  color: var(--accent-text);
+}
+.live-pace-pill.behind {
+  background: var(--gold-dim);
+  color: var(--gold);
 }
 .live-phase {
   font-size: 11px;
