@@ -42,7 +42,7 @@ export default function LiveProjection({ live }: Props) {
                 {a.done
                   ? "Complete"
                   : a.phaseKey === "eval"
-                    ? "Eval · no payout"
+                    ? "Eval"
                     : a.phaseKey === "remaining"
                       ? `payout ${a.payoutNo}/${a.totalPayouts}`
                       : `${a.phaseLabel} · payout ${a.payoutNo}/${a.totalPayouts}`}
