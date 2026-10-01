@@ -814,6 +814,7 @@ export interface AccountLive {
   phaseTarget: number;
   remaining: number;
   pct: number; // 0..1 progress toward the current phase target
+  baseHit: number; // the current phase's daily per-account base target
   paceDelta: number; // ahead(+)/behind(−) vs plan, for the current cycle only
   dayInCycle: number; // trading days into the current cycle, through today (1-based)
   daysToTarget: number | null; // trading days left to hit this target at base pace
@@ -903,6 +904,7 @@ export function liveProjection(
       phaseTarget,
       remaining,
       pct,
+      baseHit: cur ? cur.pace : 0,
       paceDelta,
       dayInCycle,
       daysToTarget,
