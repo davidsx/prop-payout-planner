@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import ActualInput from "./ActualInput";
 import {
   DaySchedule,
   PHASE_LABEL,
@@ -35,6 +36,7 @@ interface Props {
   actuals?: Record<string, number>;
   holidays?: Record<string, true>;
   onToggleHoliday?: (iso: string) => void;
+  onSetActual?: (iso: string, accountId: string, value: number | null) => void;
   focusId?: string | null; // when focused on one account, show its logged P&L
 }
 
@@ -46,6 +48,7 @@ export default function Calendar({
   actuals,
   holidays,
   onToggleHoliday,
+  onSetActual,
   focusId,
 }: Props) {
   const start = fromISO(startISO);
@@ -362,11 +365,13 @@ export default function Calendar({
                 <th>Daily / acct</th>
                 <th>Daily total</th>
                 <th>Take-home</th>
+                <th>P&amp;L</th>
               </tr>
             </thead>
             <tbody>
               {selectedDay.entries.map((e, k) => {
                 const payout = selectedDay.payouts.find((p) => p.accountId === e.accountId);
+                const future = selectedDay.iso > todayISO;
                 return (
                   <tr key={k}>
                     <td className="text">
@@ -379,6 +384,19 @@ export default function Calendar({
                     <td>{money(e.perAccountTarget)}</td>
                     <td>{money(e.dailyTarget)}</td>
                     <td className="derived">{payout ? money(payout.amount) : "—"}</td>
+                    <td className="pnl-cell">
+                      {e.rest ? (
+                        <span className="muted">Rest</span>
+                      ) : future || !onSetActual ? (
+                        <span className="muted">—</span>
+                      ) : (
+                        <ActualInput
+                          value={actuals?.[hitKey(selectedDay.iso, e.accountId)]}
+                          onCommit={(n) => onSetActual(selectedDay.iso, e.accountId, n)}
+                          placeholder="$"
+                        />
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -391,6 +409,21 @@ export default function Calendar({
                 <td>{money(selectedDay.dailyTargetTotal)}</td>
                 <td className="derived">
                   {selectedDay.payoutTotal > 0 ? money(selectedDay.payoutTotal) : "—"}
+                </td>
+                <td className="pnl-cell">
+                  {(() => {
+                    const logged = selectedDay.entries.filter(
+                      (e) =>
+                        !e.rest &&
+                        actuals?.[hitKey(selectedDay.iso, e.accountId)] !== undefined,
+                    );
+                    if (logged.length === 0) return <span className="muted">—</span>;
+                    const sum = logged.reduce(
+                      (s, e) => s + (actuals?.[hitKey(selectedDay.iso, e.accountId)] ?? 0),
+                      0,
+                    );
+                    return money(sum);
+                  })()}
                 </td>
               </tr>
             </tfoot>

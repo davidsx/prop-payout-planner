@@ -1349,6 +1349,7 @@ tfoot td {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
   padding: 16px 18px;
+  overflow-x: auto;
 }
 .daylist h3 {
   margin: 0 0 10px;
@@ -1364,6 +1365,7 @@ tfoot td {
   padding: 6px 8px;
   border-bottom: 1px solid var(--border-soft);
   text-align: right;
+  white-space: nowrap;
 }
 .daylist th {
   color: var(--text-faint);
@@ -1374,6 +1376,25 @@ tfoot td {
 .daylist td.text,
 .daylist th.text {
   text-align: left;
+}
+.daylist td.pnl-cell {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.daylist .pnl-cell input {
+  width: 90px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 13px;
+  text-align: right;
+}
+.daylist .pnl-cell input:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 .tag {
   display: inline-block;
@@ -1511,6 +1532,6 @@ tfoot td {
     overflow-x: auto;
   }
   .daylist table {
-    min-width: 460px;
+    min-width: 560px;
   }
 }
