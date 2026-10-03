@@ -1377,24 +1377,17 @@ tfoot td {
 .daylist th.text {
   text-align: left;
 }
-.daylist td.pnl-cell {
-  padding-top: 4px;
-  padding-bottom: 4px;
+.daylist td.pnl-val {
+  font-weight: 600;
 }
-.daylist .pnl-cell input {
-  width: 90px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 6px;
-  padding: 5px 7px;
-  font: inherit;
-  font-size: 13px;
-  text-align: right;
+.daylist td.pnl-val.hit {
+  color: var(--accent-text);
 }
-.daylist .pnl-cell input:focus {
-  outline: none;
-  border-color: var(--accent);
+.daylist td.pnl-val.partial {
+  color: var(--blue);
+}
+.daylist td.pnl-val.miss {
+  color: var(--danger);
 }
 .tag {
   display: inline-block;

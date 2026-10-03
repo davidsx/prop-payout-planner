@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import ActualInput from "./ActualInput";
 import {
   DaySchedule,
   PHASE_LABEL,
@@ -36,7 +35,6 @@ interface Props {
   actuals?: Record<string, number>;
   holidays?: Record<string, true>;
   onToggleHoliday?: (iso: string) => void;
-  onSetActual?: (iso: string, accountId: string, value: number | null) => void;
   focusId?: string | null; // when focused on one account, show its logged P&L
 }
 
@@ -48,7 +46,6 @@ export default function Calendar({
   actuals,
   holidays,
   onToggleHoliday,
-  onSetActual,
   focusId,
 }: Props) {
   const start = fromISO(startISO);
@@ -371,7 +368,17 @@ export default function Calendar({
             <tbody>
               {selectedDay.entries.map((e, k) => {
                 const payout = selectedDay.payouts.find((p) => p.accountId === e.accountId);
-                const future = selectedDay.iso > todayISO;
+                const pnl = actuals?.[hitKey(selectedDay.iso, e.accountId)];
+                // Red for a loss, blue for a profit below the base hit, green
+                // once the per-account base hit (daily target) is reached.
+                const r =
+                  e.rest || pnl === undefined
+                    ? null
+                    : pnl < 0
+                      ? "miss"
+                      : pnl >= e.perAccountTarget
+                        ? "hit"
+                        : "partial";
                 return (
                   <tr key={k}>
                     <td className="text">
@@ -384,17 +391,13 @@ export default function Calendar({
                     <td>{money(e.perAccountTarget)}</td>
                     <td>{money(e.dailyTarget)}</td>
                     <td className="derived">{payout ? money(payout.amount) : "—"}</td>
-                    <td className="pnl-cell">
+                    <td className={r ? `pnl-val ${r}` : undefined}>
                       {e.rest ? (
                         <span className="muted">Rest</span>
-                      ) : future || !onSetActual ? (
+                      ) : pnl === undefined ? (
                         <span className="muted">—</span>
                       ) : (
-                        <ActualInput
-                          value={actuals?.[hitKey(selectedDay.iso, e.accountId)]}
-                          onCommit={(n) => onSetActual(selectedDay.iso, e.accountId, n)}
-                          placeholder="$"
-                        />
+                        money(pnl)
                       )}
                     </td>
                   </tr>
@@ -410,7 +413,7 @@ export default function Calendar({
                 <td className="derived">
                   {selectedDay.payoutTotal > 0 ? money(selectedDay.payoutTotal) : "—"}
                 </td>
-                <td className="pnl-cell">
+                <td>
                   {(() => {
                     const logged = selectedDay.entries.filter(
                       (e) =>
